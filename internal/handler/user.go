@@ -58,12 +58,7 @@ func (h *handlerUser) Login(c *gin.Context) {
 	}
 
 	user, err := h.repoUser.FindByEmail(input.Email)
-	if err != nil {
-		helper.GenerateResponseAPI(http.StatusBadRequest, "error", err, c, false)
-		return
-	}
-
-	if user.Email != input.Email {
+	if err != nil && user.Id == 0 {
 		helper.GenerateResponseAPI(http.StatusUnauthorized, "unauthorized", "email not registered", c, false)
 		return
 	}
