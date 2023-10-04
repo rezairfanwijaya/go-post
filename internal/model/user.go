@@ -15,3 +15,8 @@ type InputUserLogin struct {
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required,min=5"`
 }
+
+type UserWithPostsResponse struct {
+	User User   `json:"user"`
+	Post []Post `json:"posts"`
+}

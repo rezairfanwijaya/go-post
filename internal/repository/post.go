@@ -8,6 +8,7 @@ import (
 type PostRepository interface {
 	Save(post model.Post) error
 	FindByPostId(postId int) (model.Post, error)
+	FindByUserId(userId int) ([]model.Post, error)
 }
 
 type postRepository struct {
@@ -54,4 +55,35 @@ func (r *postRepository) FindByPostId(postId int) (model.Post, error) {
 	}
 
 	return post, nil
+}
+
+func (r *postRepository) FindByUserId(userId int) ([]model.Post, error) {
+	posts := []model.Post{}
+
+	query := `
+		SELECT id, title, content FROM posts WHERE user_id = $1
+	`
+
+	rows, err := r.db.Query(query, userId)
+	if err != nil {
+		return posts, err
+	}
+
+	for rows.Next() {
+		post := model.Post{}
+
+		err := rows.Scan(
+			&post.Id,
+			&post.Title,
+			&post.Content,
+		)
+
+		if err != nil {
+			return posts, err
+		}
+
+		posts = append(posts, post)
+	}
+
+	return posts, nil
 }

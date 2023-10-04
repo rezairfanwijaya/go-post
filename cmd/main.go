@@ -17,8 +17,8 @@ func main() {
 	}
 
 	userRepo := repository.NewRepositoryUser(db)
-	userHandler := handler.NewUserHandler(userRepo)
 	postRepo := repository.NewPostRepository(db)
+	userHandler := handler.NewUserHandler(userRepo, postRepo)
 	postHandler := handler.NewPostHandler(postRepo, userRepo)
 
 	r := gin.Default()
@@ -26,6 +26,8 @@ func main() {
 	API := r.Group("/api")
 	API.POST("/user/signup", userHandler.SignUp)
 	API.POST("/user/Create", userHandler.Login)
+	API.GET("/users/:id/posts", userHandler.GetUserWitPosts)
+	
 	API.POST("/post", postHandler.CreatePost)
 	API.GET("/posts/:id/user", postHandler.GetPostDetail)
 
