@@ -10,17 +10,17 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type handlerUser struct {
+type userHandler struct {
 	repoUser repository.UserRepository
 }
 
-func NewUserHandler(repoUser repository.UserRepository) *handlerUser {
-	return &handlerUser{
+func NewUserHandler(repoUser repository.UserRepository) *userHandler {
+	return &userHandler{
 		repoUser: repoUser,
 	}
 }
 
-func (h *handlerUser) SignUp(c *gin.Context) {
+func (h *userHandler) SignUp(c *gin.Context) {
 	var input model.InputUserSignUp
 
 	if err := c.BindJSON(&input); err != nil {
@@ -48,7 +48,7 @@ func (h *handlerUser) SignUp(c *gin.Context) {
 	helper.GenerateResponseAPI(http.StatusOK, "success", "success", c, false)
 }
 
-func (h *handlerUser) Login(c *gin.Context) {
+func (h *userHandler) Login(c *gin.Context) {
 	var input model.InputUserLogin
 
 	if err := c.BindJSON(&input); err != nil {

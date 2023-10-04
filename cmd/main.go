@@ -19,14 +19,15 @@ func main() {
 	userRepo := repository.NewRepositoryUser(db)
 	userHandler := handler.NewUserHandler(userRepo)
 	postRepo := repository.NewPostRepository(db)
-	postHandler := handler.NewPostHandler(postRepo)
+	postHandler := handler.NewPostHandler(postRepo, userRepo)
 
 	r := gin.Default()
 
 	API := r.Group("/api")
 	API.POST("/user/signup", userHandler.SignUp)
 	API.POST("/user/Create", userHandler.Login)
-	API.POST("/post", postHandler.NewPost)
+	API.POST("/post", postHandler.CreatePost)
+	API.GET("/posts/:id/user", postHandler.GetPostDetail)
 
 	if err := r.Run(":8080"); err != nil {
 		log.Fatal(err)

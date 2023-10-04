@@ -8,7 +8,7 @@ import (
 type UserRepository interface {
 	Save(user model.User) error
 	FindByEmail(email string) (model.User, error)
-	FindById(userId string) (model.User, error)
+	FindById(userId int) (model.User, error)
 }
 
 type serRepository struct {
@@ -56,7 +56,7 @@ func (r *serRepository) FindByEmail(email string) (model.User, error) {
 	return user, nil
 }
 
-func (r *serRepository) FindById(userId string) (model.User, error) {
+func (r *serRepository) FindById(userId int) (model.User, error) {
 	var user model.User
 
 	query := `
