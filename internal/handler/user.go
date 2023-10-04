@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"go-post/internal/auth"
 	"go-post/internal/helper"
 	"go-post/internal/model"
 	"go-post/internal/repository"
@@ -11,12 +12,14 @@ import (
 )
 
 type handlerUser struct {
-	repoUser repository.UserRepository
+	repoUser    repository.UserRepository
+	authService auth.AuthService
 }
 
-func NewHandlerUser(repoUser repository.UserRepository) *handlerUser {
+func NewHandlerUser(repoUser repository.UserRepository, authService auth.AuthService) *handlerUser {
 	return &handlerUser{
-		repoUser: repoUser,
+		repoUser:    repoUser,
+		authService: authService,
 	}
 }
 
@@ -57,4 +60,39 @@ func (h *handlerUser) SignUp(c *gin.Context) {
 	}
 
 	helper.GenerateResponseAPI(http.StatusOK, "success", userSaved, c)
+}
+
+func (h *handlerUser) Login(c *gin.Context) {
+	var input model.InputUserLogin
+
+	if err := c.BindJSON(&input); err != nil {
+		errsBinding := helper.ErrorBindingFormatter(err)
+		helper.GenerateResponseAPI(http.StatusBadRequest, "error binding", errsBinding, c)
+		return
+	}
+
+	user, err := h.repoUser.FindByEmail(input.Email)
+	if err != nil {
+		helper.GenerateResponseAPI(http.StatusBadRequest, "error", err, c)
+		return
+	}
+
+	if user.Email != input.Email {
+		helper.GenerateResponseAPI(http.StatusUnauthorized, "unauthorized", "email not registered", c)
+		return
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password)); err != nil {
+		helper.GenerateResponseAPI(http.StatusBadRequest, "error", "wrong password", c)
+		return
+	}
+
+	token, err := h.authService.GenerateToken(user.Id)
+	if err != nil {
+		helper.GenerateResponseAPI(http.StatusInternalServerError, "error", err, c)
+		return
+	}
+
+	helper.GenerateResponseAPI(http.StatusOK, "success", token, c)
+	return
 }
