@@ -13,6 +13,11 @@ type InputCreatePost struct {
 	Content string `json:"content"`
 }
 
+type InputUpdatePost struct {
+	Title   string `json:"title"`
+	Content string `json:"content"`
+}
+
 type PostDetailReponse struct {
 	Post Post `json:"post"`
 	User User `json:"user"`

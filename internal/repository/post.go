@@ -10,6 +10,7 @@ type PostRepository interface {
 	FindByPostId(postId int) (model.Post, error)
 	FindByUserId(userId int) ([]model.Post, error)
 	Delete(postId int) error
+	Update(postId int, post model.Post) error
 }
 
 type postRepository struct {
@@ -95,6 +96,20 @@ func (r *postRepository) Delete(postId int) error {
 	`
 
 	_, err := r.db.Exec(query, postId)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *postRepository) Update(postId int, post model.Post) error {
+	query := `
+		UPDATE posts SET title = $1, content = $2 WHERE id = $3
+	`
+
+	_, err := r.db.Exec(query, post.Title, post.Content, postId)
+
 	if err != nil {
 		return err
 	}
