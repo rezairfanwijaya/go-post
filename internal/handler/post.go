@@ -72,3 +72,26 @@ func (h *postHandler) GetPostDetail(c *gin.Context) {
 
 	helper.GenerateResponseAPI(http.StatusOK, "success", postDetail, c, false)
 }
+
+func (h *postHandler) DeletePost(c *gin.Context) {
+	id := c.Param("id")
+
+	postId, err := strconv.Atoi(id)
+	if err != nil {
+		helper.GenerateResponseAPI(http.StatusBadRequest, "error in convert id", err.Error(), c, false)
+		return
+	}
+
+	post, err := h.postRepo.FindByPostId(postId)
+	if err != nil && post.Id == 0 {
+		helper.GenerateResponseAPI(http.StatusBadRequest, "error", err.Error(), c, false)
+		return
+	}
+
+	if err := h.postRepo.Delete(postId); err != nil {
+		helper.GenerateResponseAPI(http.StatusBadRequest, "error", err.Error(), c, false)
+		return
+	}
+
+	helper.GenerateResponseAPI(http.StatusOK, "success", "success", c, false)
+}

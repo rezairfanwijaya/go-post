@@ -27,9 +27,10 @@ func main() {
 	API.POST("/user/signup", userHandler.SignUp)
 	API.POST("/user/Create", userHandler.Login)
 	API.GET("/users/:id/posts", userHandler.GetUserWitPosts)
-	
+
 	API.POST("/post", postHandler.CreatePost)
 	API.GET("/posts/:id/user", postHandler.GetPostDetail)
+	API.DELETE("/posts/:id", postHandler.DeletePost)
 
 	if err := r.Run(":8080"); err != nil {
 		log.Fatal(err)

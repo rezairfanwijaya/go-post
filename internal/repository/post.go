@@ -9,6 +9,7 @@ type PostRepository interface {
 	Save(post model.Post) error
 	FindByPostId(postId int) (model.Post, error)
 	FindByUserId(userId int) ([]model.Post, error)
+	Delete(postId int) error
 }
 
 type postRepository struct {
@@ -86,4 +87,17 @@ func (r *postRepository) FindByUserId(userId int) ([]model.Post, error) {
 	}
 
 	return posts, nil
+}
+
+func (r *postRepository) Delete(postId int) error {
+	query := `
+		DELETE FROM posts WHERE id = $1
+	`
+
+	_, err := r.db.Exec(query, postId)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
