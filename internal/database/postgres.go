@@ -1,6 +1,8 @@
 package database
 
 import (
+	"go-post/internal/model"
+
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -12,6 +14,11 @@ func NewConnection() (*gorm.DB, error) {
 	if err != nil {
 		return db, err
 	}
+
+	db.AutoMigrate(
+		&model.Post{},
+		&model.User{},
+	)
 
 	return db, err
 }
