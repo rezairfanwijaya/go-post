@@ -1,29 +1,34 @@
 package repository
 
 import (
+	"database/sql"
 	"go-post/internal/model"
-
-	"gorm.io/gorm"
 )
 
 type PostRepository interface {
-	Save(post model.Post) (model.Post, error)
+	Save(post model.Post) error
 }
 
 type postRepository struct {
-	db *gorm.DB
+	db *sql.DB
 }
 
-func NewPostRepository(db *gorm.DB) PostRepository {
+func NewPostRepository(db *sql.DB) PostRepository {
 	return &postRepository{
 		db: db,
 	}
 }
 
-func (r *postRepository) Save(post model.Post) (model.Post, error) {
-	if err := r.db.Create(&post).Error; err != nil {
-		return post, err
+func (r *postRepository) Save(post model.Post) error {
+	query := `
+		INSERT into posts (user_id, title, content) VALUES ($1, $2, $3)
+	`
+
+	_, err := r.db.Exec(query, post.UserId, post.Title, post.Content)
+	if err != nil {
+		return err
 	}
 
-	return post, nil
+	return nil
+
 }

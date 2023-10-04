@@ -14,7 +14,7 @@ type handlerUser struct {
 	repoUser repository.UserRepository
 }
 
-func NewHandlerUser(repoUser repository.UserRepository) *handlerUser {
+func NewUserHandler(repoUser repository.UserRepository) *handlerUser {
 	return &handlerUser{
 		repoUser: repoUser,
 	}

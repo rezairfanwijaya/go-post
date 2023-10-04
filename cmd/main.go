@@ -16,16 +16,17 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// authService := auth.NewAuthService()
-
 	userRepo := repository.NewRepositoryUser(db)
-	userHandler := handler.NewHandlerUser(userRepo)
+	userHandler := handler.NewUserHandler(userRepo)
+	postRepo := repository.NewPostRepository(db)
+	postHandler := handler.NewPostHandler(postRepo)
 
 	r := gin.Default()
 
 	API := r.Group("/api")
 	API.POST("/user/signup", userHandler.SignUp)
-	API.POST("/user/login", userHandler.Login)
+	API.POST("/user/Create", userHandler.Login)
+	API.POST("/post", postHandler.NewPost)
 
 	if err := r.Run(":8080"); err != nil {
 		log.Fatal(err)

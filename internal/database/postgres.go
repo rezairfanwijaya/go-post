@@ -33,6 +33,7 @@ func NewConnection() (*sql.DB, error) {
 	migrationSchemaPost := `
 		CREATE TABLE if not exists posts (
 			id SERIAL primary key,
+			user_id int,
 			title varchar(200),
 			content varchar(500),
 			CONSTRAINT title_unique UNIQUE (title)
