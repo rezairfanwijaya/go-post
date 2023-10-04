@@ -1,24 +1,53 @@
 package database
 
 import (
-	"go-post/internal/model"
+	"database/sql"
+	"fmt"
 
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
+	_ "github.com/lib/pq"
 )
 
-func NewConnection() (*gorm.DB, error) {
-	dsn := "host=localhost user=postgres password=admin dbname=article port=5432 sslmode=disable TimeZone=Asia/Shanghai"
+func NewConnection() (*sql.DB, error) {
+	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		"127.0.0.1",
+		"5432",
+		"postgres",
+		"admin",
+		"article",
+	)
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return db, err
 	}
 
-	db.AutoMigrate(
-		&model.Post{},
-		&model.User{},
-	)
+	migrationSchemaUser := `
+		CREATE TABLE if not exists users (
+			id SERIAL primary key,
+			email varchar(200),
+			password varchar(200),
+			CONSTRAINT email_unique UNIQUE (email)
+		)
+	`
 
-	return db, err
+	migrationSchemaPost := `
+		CREATE TABLE if not exists posts (
+			id SERIAL primary key,
+			title varchar(200),
+			content varchar(500),
+			CONSTRAINT title_unique UNIQUE (title)
+		)
+	`
+
+	_, err = db.Exec(migrationSchemaUser)
+	if err != nil {
+		return db, err
+	}
+
+	_, err = db.Exec(migrationSchemaPost)
+	if err != nil {
+		return db, err
+	}
+
+	return db, nil
 }

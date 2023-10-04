@@ -1,13 +1,13 @@
 package main
 
 import (
-	"go-post/internal/auth"
 	"go-post/internal/database"
 	"go-post/internal/handler"
 	"go-post/internal/repository"
 	"log"
 
 	"github.com/gin-gonic/gin"
+	_ "github.com/lib/pq"
 )
 
 func main() {
@@ -16,10 +16,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	authService := auth.NewAuthService()
+	// authService := auth.NewAuthService()
 
 	userRepo := repository.NewRepositoryUser(db)
-	userHandler := handler.NewHandlerUser(userRepo, authService)
+	userHandler := handler.NewHandlerUser(userRepo)
 
 	r := gin.Default()
 

@@ -15,7 +15,7 @@ type meta struct {
 	Status string `json:"status"`
 }
 
-func GenerateResponseAPI(code int, status string, data any, c *gin.Context) {
+func GenerateResponseAPI(code int, status string, data any, c *gin.Context, isMiddleware bool) {
 	response := responseAPI{
 		Meta: meta{
 			Code:   code,
@@ -24,7 +24,11 @@ func GenerateResponseAPI(code int, status string, data any, c *gin.Context) {
 		Data: data,
 	}
 
-	c.JSON(code, response)
+	if isMiddleware {
+		c.AbortWithStatusJSON(code, response)
+	} else {
+		c.JSON(code, response)
+	}
 }
 
 func ErrorBindingFormatter(err error) []string {

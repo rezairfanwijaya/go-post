@@ -1,9 +1,9 @@
 package model
 
 type User struct {
-	Id       int    `json:"id" gorm:"primaryKey"`
-	Email    string `json:"email"`
-	Password string `json:"-"`
+	Id       int    `json:"id" db:"id"`
+	Email    string `json:"email" db:"email"`
+	Password string `json:"-" db:"password"`
 }
 
 type InputUserSignUp struct {

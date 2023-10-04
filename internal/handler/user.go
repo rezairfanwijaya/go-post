@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"go-post/internal/auth"
 	"go-post/internal/helper"
 	"go-post/internal/model"
 	"go-post/internal/repository"
@@ -12,14 +11,12 @@ import (
 )
 
 type handlerUser struct {
-	repoUser    repository.UserRepository
-	authService auth.AuthService
+	repoUser repository.UserRepository
 }
 
-func NewHandlerUser(repoUser repository.UserRepository, authService auth.AuthService) *handlerUser {
+func NewHandlerUser(repoUser repository.UserRepository) *handlerUser {
 	return &handlerUser{
-		repoUser:    repoUser,
-		authService: authService,
+		repoUser: repoUser,
 	}
 }
 
@@ -28,24 +25,13 @@ func (h *handlerUser) SignUp(c *gin.Context) {
 
 	if err := c.BindJSON(&input); err != nil {
 		errsBinding := helper.ErrorBindingFormatter(err)
-		helper.GenerateResponseAPI(http.StatusBadRequest, "error binding", errsBinding, c)
-		return
-	}
-
-	user, err := h.repoUser.FindByEmail(input.Email)
-	if err != nil {
-		helper.GenerateResponseAPI(http.StatusBadRequest, "error", err, c)
-		return
-	}
-
-	if user.Id != 0 {
-		helper.GenerateResponseAPI(http.StatusBadRequest, "error", "email already taken", c)
+		helper.GenerateResponseAPI(http.StatusBadRequest, "error binding", errsBinding, c, false)
 		return
 	}
 
 	passwordHashed, err := bcrypt.GenerateFromPassword([]byte(input.Password), 10)
 	if err != nil {
-		helper.GenerateResponseAPI(http.StatusBadRequest, "error", err, c)
+		helper.GenerateResponseAPI(http.StatusBadRequest, "error", err, c, false)
 		return
 	}
 
@@ -53,13 +39,13 @@ func (h *handlerUser) SignUp(c *gin.Context) {
 	newUser.Email = input.Email
 	newUser.Password = string(passwordHashed)
 
-	userSaved, err := h.repoUser.Save(newUser)
+	err = h.repoUser.Save(newUser)
 	if err != nil {
-		helper.GenerateResponseAPI(http.StatusBadRequest, "error binding", err, c)
+		helper.GenerateResponseAPI(http.StatusBadRequest, "error", err, c, false)
 		return
 	}
 
-	helper.GenerateResponseAPI(http.StatusOK, "success", userSaved, c)
+	helper.GenerateResponseAPI(http.StatusOK, "success", "success", c, false)
 }
 
 func (h *handlerUser) Login(c *gin.Context) {
@@ -67,32 +53,25 @@ func (h *handlerUser) Login(c *gin.Context) {
 
 	if err := c.BindJSON(&input); err != nil {
 		errsBinding := helper.ErrorBindingFormatter(err)
-		helper.GenerateResponseAPI(http.StatusBadRequest, "error binding", errsBinding, c)
+		helper.GenerateResponseAPI(http.StatusBadRequest, "error binding", errsBinding, c, false)
 		return
 	}
 
 	user, err := h.repoUser.FindByEmail(input.Email)
 	if err != nil {
-		helper.GenerateResponseAPI(http.StatusBadRequest, "error", err, c)
+		helper.GenerateResponseAPI(http.StatusBadRequest, "error", err, c, false)
 		return
 	}
 
 	if user.Email != input.Email {
-		helper.GenerateResponseAPI(http.StatusUnauthorized, "unauthorized", "email not registered", c)
+		helper.GenerateResponseAPI(http.StatusUnauthorized, "unauthorized", "email not registered", c, false)
 		return
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password)); err != nil {
-		helper.GenerateResponseAPI(http.StatusBadRequest, "error", "wrong password", c)
+		helper.GenerateResponseAPI(http.StatusBadRequest, "error", "wrong password", c, false)
 		return
 	}
 
-	token, err := h.authService.GenerateToken(user.Id)
-	if err != nil {
-		helper.GenerateResponseAPI(http.StatusInternalServerError, "error", err, c)
-		return
-	}
-
-	helper.GenerateResponseAPI(http.StatusOK, "success", token, c)
-	return
+	helper.GenerateResponseAPI(http.StatusOK, "success", user, c, false)
 }

@@ -1,38 +1,55 @@
 package repository
 
 import (
+	"database/sql"
 	"go-post/internal/model"
-
-	"gorm.io/gorm"
 )
 
 type UserRepository interface {
-	Save(user model.User) (model.User, error)
+	Save(user model.User) error
 	FindByEmail(email string) (model.User, error)
 	FindById(userId string) (model.User, error)
 }
 
 type serRepository struct {
-	db *gorm.DB
+	db *sql.DB
 }
 
-func NewRepositoryUser(db *gorm.DB) UserRepository {
+func NewRepositoryUser(db *sql.DB) UserRepository {
 	return &serRepository{
 		db: db,
 	}
 }
 
-func (r *serRepository) Save(user model.User) (model.User, error) {
-	if err := r.db.Create(&user).Error; err != nil {
-		return user, err
+func (r *serRepository) Save(user model.User) error {
+	query := `
+		INSERT INTO users (email, password) VALUES ($1, $2)
+	`
+
+	if _, err := r.db.Exec(query, user.Email, user.Password); err != nil {
+		return err
 	}
 
-	return user, nil
+	return nil
+
 }
 
 func (r *serRepository) FindByEmail(email string) (model.User, error) {
 	var user model.User
-	if err := r.db.Where("email = ?", email).Find(&user).Error; err != nil {
+
+	query := `
+		SELECT * FROM users WHERE email = $1
+	`
+
+	row := r.db.QueryRow(query, email)
+
+	err := row.Scan(
+		&user.Id,
+		&user.Email,
+		&user.Password,
+	)
+
+	if err != nil {
 		return user, err
 	}
 
@@ -41,7 +58,20 @@ func (r *serRepository) FindByEmail(email string) (model.User, error) {
 
 func (r *serRepository) FindById(userId string) (model.User, error) {
 	var user model.User
-	if err := r.db.Where("id = ?", userId).Error; err != nil {
+
+	query := `
+		SELECT * FROM users WHERE id = $1
+	`
+
+	row := r.db.QueryRow(query, userId)
+
+	err := row.Scan(
+		&user.Id,
+		&user.Email,
+		&user.Password,
+	)
+
+	if err != nil {
 		return user, err
 	}
 
