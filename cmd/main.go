@@ -2,8 +2,7 @@ package main
 
 import (
 	"go-post/internal/database"
-	"go-post/internal/handler"
-	"go-post/internal/repository"
+	"go-post/internal/router"
 	"log"
 
 	"github.com/gin-gonic/gin"
@@ -16,22 +15,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	userRepo := repository.NewRepositoryUser(db)
-	postRepo := repository.NewPostRepository(db)
-	userHandler := handler.NewUserHandler(userRepo, postRepo)
-	postHandler := handler.NewPostHandler(postRepo, userRepo)
-
 	r := gin.Default()
 
-	API := r.Group("/api")
-	API.POST("/user/signup", userHandler.SignUp)
-	API.POST("/user/Create", userHandler.Login)
-	API.GET("/users/:id/posts", userHandler.GetUserWitPosts)
-
-	API.POST("/post", postHandler.CreatePost)
-	API.GET("/posts/:id/user", postHandler.GetPostDetail)
-	API.DELETE("/posts/:id", postHandler.DeletePost)
-	API.PUT("/posts/:id", postHandler.UpdatePost)
+	router.NewRouter(r, db)
 
 	if err := r.Run(":8080"); err != nil {
 		log.Fatal(err)

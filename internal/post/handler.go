@@ -1,9 +1,7 @@
-package handler
+package post
 
 import (
 	"go-post/internal/helper"
-	"go-post/internal/model"
-	"go-post/internal/repository"
 	"net/http"
 	"strconv"
 
@@ -11,26 +9,24 @@ import (
 )
 
 type postHandler struct {
-	postRepo repository.PostRepository
-	userRepo repository.UserRepository
+	postRepo PostRepository
 }
 
-func NewPostHandler(postRepo repository.PostRepository, userRepo repository.UserRepository) postHandler {
+func NewPostHandler(postRepo PostRepository) postHandler {
 	return postHandler{
 		postRepo: postRepo,
-		userRepo: userRepo,
 	}
 }
 
 func (h *postHandler) CreatePost(c *gin.Context) {
-	var input model.InputCreatePost
+	var input InputCreatePost
 
 	if err := c.BindJSON(&input); err != nil {
 		helper.GenerateResponseAPI(http.StatusBadRequest, "error", err.Error(), c, false)
 		return
 	}
 
-	post := model.Post{
+	post := Post{
 		UserId:  input.UserId,
 		Title:   input.Title,
 		Content: input.Content,
@@ -42,35 +38,6 @@ func (h *postHandler) CreatePost(c *gin.Context) {
 	}
 
 	helper.GenerateResponseAPI(http.StatusOK, "success", "success", c, false)
-}
-
-func (h *postHandler) GetPostDetail(c *gin.Context) {
-	id := c.Param("id")
-
-	postId, err := strconv.Atoi(id)
-	if err != nil {
-		helper.GenerateResponseAPI(http.StatusBadRequest, "error in convert id", err.Error(), c, false)
-		return
-	}
-
-	post, err := h.postRepo.FindByPostId(postId)
-	if err != nil {
-		helper.GenerateResponseAPI(http.StatusInternalServerError, "error", err.Error(), c, false)
-		return
-	}
-
-	user, err := h.userRepo.FindById(post.UserId)
-	if err != nil {
-		helper.GenerateResponseAPI(http.StatusInternalServerError, "error", err.Error(), c, false)
-		return
-	}
-
-	postDetail := model.PostDetailReponse{
-		Post: post,
-		User: user,
-	}
-
-	helper.GenerateResponseAPI(http.StatusOK, "success", postDetail, c, false)
 }
 
 func (h *postHandler) DeletePost(c *gin.Context) {
@@ -105,7 +72,7 @@ func (h *postHandler) UpdatePost(c *gin.Context) {
 		return
 	}
 
-	var input model.InputUpdatePost
+	var input InputUpdatePost
 	if err := c.BindJSON(&input); err != nil {
 		errsBinding := helper.ErrorBindingFormatter(err)
 		helper.GenerateResponseAPI(http.StatusBadRequest, "error binding", errsBinding, c, false)

@@ -1,16 +1,15 @@
-package repository
+package post
 
 import (
 	"database/sql"
-	"go-post/internal/model"
 )
 
 type PostRepository interface {
-	Save(post model.Post) error
-	FindByPostId(postId int) (model.Post, error)
-	FindByUserId(userId int) ([]model.Post, error)
+	Save(post Post) error
+	FindByPostId(postId int) (Post, error)
+	FindByUserId(userId int) ([]Post, error)
 	Delete(postId int) error
-	Update(postId int, post model.Post) error
+	Update(postId int, post Post) error
 }
 
 type postRepository struct {
@@ -23,7 +22,7 @@ func NewPostRepository(db *sql.DB) PostRepository {
 	}
 }
 
-func (r *postRepository) Save(post model.Post) error {
+func (r *postRepository) Save(post Post) error {
 	query := `
 		INSERT into posts (user_id, title, content) VALUES ($1, $2, $3)
 	`
@@ -37,8 +36,8 @@ func (r *postRepository) Save(post model.Post) error {
 
 }
 
-func (r *postRepository) FindByPostId(postId int) (model.Post, error) {
-	post := model.Post{}
+func (r *postRepository) FindByPostId(postId int) (Post, error) {
+	post := Post{}
 
 	query := `
 		SELECT * FROM posts WHERE id = $1
@@ -59,8 +58,8 @@ func (r *postRepository) FindByPostId(postId int) (model.Post, error) {
 	return post, nil
 }
 
-func (r *postRepository) FindByUserId(userId int) ([]model.Post, error) {
-	posts := []model.Post{}
+func (r *postRepository) FindByUserId(userId int) ([]Post, error) {
+	posts := []Post{}
 
 	query := `
 		SELECT id, title, content FROM posts WHERE user_id = $1
@@ -72,7 +71,7 @@ func (r *postRepository) FindByUserId(userId int) ([]model.Post, error) {
 	}
 
 	for rows.Next() {
-		post := model.Post{}
+		post := Post{}
 
 		err := rows.Scan(
 			&post.Id,
@@ -103,7 +102,7 @@ func (r *postRepository) Delete(postId int) error {
 	return nil
 }
 
-func (r *postRepository) Update(postId int, post model.Post) error {
+func (r *postRepository) Update(postId int, post Post) error {
 	query := `
 		UPDATE posts SET title = $1, content = $2 WHERE id = $3
 	`
