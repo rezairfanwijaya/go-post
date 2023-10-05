@@ -17,7 +17,7 @@ func NewRouter(engine *gin.Engine, db *sql.DB) {
 
 	API := engine.Group("/api")
 	API.POST("/users/signup", userHandler.SignUp)
-	API.GET("/users/:id/posts", userHandler.GetUserWitPosts)
+	API.GET("/users/:id/posts", userHandler.GetUserWithPosts)
 
 	API.POST("/posts", postHandler.CreatePost)
 	API.DELETE("/posts/:id", postHandler.DeletePost)
