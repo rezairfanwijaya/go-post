@@ -66,7 +66,7 @@ func (h *postHandler) GetPostWithUser(c *gin.Context) {
 		return
 	}
 
-	postWithUser := response.PostWithUserResponse{
+	postWithUser := response.PostWithUserReponse{
 		Post: post,
 		User: user,
 	}
