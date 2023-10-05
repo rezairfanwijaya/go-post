@@ -75,7 +75,7 @@ func (h *userHandler) Login(c *gin.Context) {
 	helper.GenerateResponseAPI(http.StatusOK, "success", user, c, false)
 }
 
-func (h *userHandler) GetUserWithPosts(c *gin.Context) {
+func (h *userHandler) GetUserWitPosts(c *gin.Context) {
 	id := c.Param("id")
 
 	userId, err := strconv.Atoi(id)
