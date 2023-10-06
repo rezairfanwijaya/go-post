@@ -5,7 +5,7 @@ import (
 	"go-post/internal/user"
 )
 
-type PostWithUserReponse struct {
+type PostResponse struct {
 	Post post.Post `json:"post"`
 	User user.User `json:"user"`
 }

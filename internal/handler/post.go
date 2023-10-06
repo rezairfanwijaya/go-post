@@ -45,7 +45,7 @@ func (h *postHandler) CreatePost(c *gin.Context) {
 	helper.GenerateResponseAPI(http.StatusOK, "success", "success", c, false)
 }
 
-func (h *postHandler) GetPostWithUser(c *gin.Context) {
+func (h *postHandler) GetPost(c *gin.Context) {
 	id := c.Param("id")
 
 	postId, err := strconv.Atoi(id)
@@ -66,12 +66,12 @@ func (h *postHandler) GetPostWithUser(c *gin.Context) {
 		return
 	}
 
-	postWithUser := response.PostWithUserReponse{
+	postResponse := response.PostResponse{
 		Post: post,
 		User: user,
 	}
 
-	helper.GenerateResponseAPI(http.StatusOK, "success", postWithUser, c, false)
+	helper.GenerateResponseAPI(http.StatusOK, "success", postResponse, c, false)
 }
 
 func (h *postHandler) DeletePost(c *gin.Context) {

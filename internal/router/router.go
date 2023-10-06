@@ -22,6 +22,5 @@ func NewRouter(engine *gin.Engine, db *sql.DB) {
 	API.POST("/posts", postHandler.CreatePost)
 	API.DELETE("/posts/:id", postHandler.DeletePost)
 	API.PUT("/posts/:id", postHandler.UpdatePost)
-	API.GET("/posts/:id/users", postHandler.GetPostWithUser)
-
+	API.GET("/posts/:id", postHandler.GetPost)
 }
