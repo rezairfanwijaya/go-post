@@ -12,14 +12,17 @@ import (
 )
 
 type postHandler struct {
-	postRepo post.PostRepository
-	userRepo user.UserRepository
+	userInteractor user.Interactor
+	postInteractor post.Interactor
 }
 
-func NewPostHandler(postRepo post.PostRepository, userRepo user.UserRepository) postHandler {
+func NewPostHandler(
+	userInteractor user.Interactor,
+	postInteractor post.Interactor,
+) postHandler {
 	return postHandler{
-		postRepo: postRepo,
-		userRepo: userRepo,
+		userInteractor: userInteractor,
+		postInteractor: postInteractor,
 	}
 }
 
@@ -31,14 +34,16 @@ func (h *postHandler) CreatePost(c *gin.Context) {
 		return
 	}
 
+	userId := c.MustGet("user").(int)
+
 	post := post.Post{
-		UserId:  input.UserId,
+		UserId:  userId,
 		Title:   input.Title,
 		Content: input.Content,
 	}
 
-	if err := h.postRepo.Save(post); err != nil {
-		helper.GenerateResponseAPI(http.StatusBadRequest, "error", err.Error(), c, false)
+	if httpCode, err := h.postInteractor.CreatePost(post); err != nil {
+		helper.GenerateResponseAPI(httpCode, "error", err.Error(), c, false)
 		return
 	}
 
@@ -47,6 +52,7 @@ func (h *postHandler) CreatePost(c *gin.Context) {
 
 func (h *postHandler) GetPost(c *gin.Context) {
 	id := c.Param("id")
+	userId := c.MustGet("user").(int)
 
 	postId, err := strconv.Atoi(id)
 	if err != nil {
@@ -54,15 +60,15 @@ func (h *postHandler) GetPost(c *gin.Context) {
 		return
 	}
 
-	post, err := h.postRepo.FindByPostId(postId)
+	post, httpCode, err := h.postInteractor.GetPost(userId, postId)
 	if err != nil {
-		helper.GenerateResponseAPI(http.StatusInternalServerError, "error", err.Error(), c, false)
+		helper.GenerateResponseAPI(httpCode, "error", err.Error(), c, false)
 		return
 	}
 
-	user, err := h.userRepo.FindById(post.UserId)
+	user, httpCode, err := h.userInteractor.GetUserById(userId)
 	if err != nil {
-		helper.GenerateResponseAPI(http.StatusInternalServerError, "error", err.Error(), c, false)
+		helper.GenerateResponseAPI(httpCode, "error", err.Error(), c, false)
 		return
 	}
 
@@ -75,22 +81,18 @@ func (h *postHandler) GetPost(c *gin.Context) {
 }
 
 func (h *postHandler) DeletePost(c *gin.Context) {
+	userId := c.MustGet("user").(int)
 	id := c.Param("id")
-
+	
 	postId, err := strconv.Atoi(id)
 	if err != nil {
 		helper.GenerateResponseAPI(http.StatusBadRequest, "error in convert id", err.Error(), c, false)
 		return
 	}
 
-	post, err := h.postRepo.FindByPostId(postId)
-	if err != nil && post.Id == 0 {
-		helper.GenerateResponseAPI(http.StatusBadRequest, "error", err.Error(), c, false)
-		return
-	}
-
-	if err := h.postRepo.Delete(postId); err != nil {
-		helper.GenerateResponseAPI(http.StatusBadRequest, "error", err.Error(), c, false)
+	httpCode, err := h.postInteractor.DeletePost(postId, userId)
+	if err != nil {
+		helper.GenerateResponseAPI(httpCode, "error", err.Error(), c, false)
 		return
 	}
 
@@ -98,6 +100,7 @@ func (h *postHandler) DeletePost(c *gin.Context) {
 }
 
 func (h *postHandler) UpdatePost(c *gin.Context) {
+	userId := c.MustGet("user").(int)
 	id := c.Param("id")
 
 	postId, err := strconv.Atoi(id)
@@ -113,18 +116,11 @@ func (h *postHandler) UpdatePost(c *gin.Context) {
 		return
 	}
 
-	post, err := h.postRepo.FindByPostId(postId)
-	if err != nil && post.Id == 0 {
-		helper.GenerateResponseAPI(http.StatusBadRequest, "error", err.Error(), c, false)
-		return
-	}
+	input.UserId = userId
 
-	post.Content = input.Content
-	post.Title = input.Title
-
-	err = h.postRepo.Update(postId, post)
+	post, httpCode, err := h.postInteractor.UpdatePost(postId, input)
 	if err != nil {
-		helper.GenerateResponseAPI(http.StatusInternalServerError, "error", err.Error(), c, false)
+		helper.GenerateResponseAPI(httpCode, "error", err.Error(), c, false)
 		return
 	}
 

@@ -1,6 +1,8 @@
 package user
 
-import "database/sql"
+import (
+	"database/sql"
+)
 
 type UserRepository interface {
 	Save(user User) error
@@ -8,17 +10,17 @@ type UserRepository interface {
 	FindById(userId int) (User, error)
 }
 
-type serRepository struct {
+type userRepository struct {
 	db *sql.DB
 }
 
 func NewRepositoryUser(db *sql.DB) UserRepository {
-	return &serRepository{
+	return &userRepository{
 		db: db,
 	}
 }
 
-func (r *serRepository) Save(user User) error {
+func (r *userRepository) Save(user User) error {
 	query := `
 		INSERT INTO users (email, password) VALUES ($1, $2)
 	`
@@ -31,7 +33,7 @@ func (r *serRepository) Save(user User) error {
 
 }
 
-func (r *serRepository) FindByEmail(email string) (User, error) {
+func (r *userRepository) FindByEmail(email string) (User, error) {
 	var user User
 
 	query := `
@@ -53,7 +55,7 @@ func (r *serRepository) FindByEmail(email string) (User, error) {
 	return user, nil
 }
 
-func (r *serRepository) FindById(userId int) (User, error) {
+func (r *userRepository) FindById(userId int) (User, error) {
 	var user User
 
 	query := `
