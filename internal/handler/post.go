@@ -83,7 +83,7 @@ func (h *postHandler) GetPost(c *gin.Context) {
 func (h *postHandler) DeletePost(c *gin.Context) {
 	userId := c.MustGet("user").(int)
 	id := c.Param("id")
-	
+
 	postId, err := strconv.Atoi(id)
 	if err != nil {
 		helper.GenerateResponseAPI(http.StatusBadRequest, "error in convert id", err.Error(), c, false)
@@ -116,9 +116,16 @@ func (h *postHandler) UpdatePost(c *gin.Context) {
 		return
 	}
 
-	input.UserId = userId
+	post, httpCode, err := h.postInteractor.GetPost(userId, postId)
+	if err != nil {
+		helper.GenerateResponseAPI(httpCode, "error", err.Error(), c, false)
+		return
+	}
 
-	post, httpCode, err := h.postInteractor.UpdatePost(postId, input)
+	post.Content = input.Content
+	post.Title = input.Title
+
+	post, httpCode, err = h.postInteractor.UpdatePost(postId, userId, post)
 	if err != nil {
 		helper.GenerateResponseAPI(httpCode, "error", err.Error(), c, false)
 		return

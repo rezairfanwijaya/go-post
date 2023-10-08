@@ -9,8 +9,9 @@ type Interactor interface {
 	CreatePost(post Post) (int, error)
 	GetPost(userId, postId int) (Post, int, error)
 	GetPostByUserId(userId int) ([]Post, int, error)
-	UpdatePost(postId int, input InputUpdatePost) (Post, int, error)
+	UpdatePost(postId, userId int, post Post) (Post, int, error)
 	DeletePost(postId, userId int) (int, error)
+	ValidateUser(userId int, post Post) bool
 }
 
 type interactor struct {
@@ -37,8 +38,8 @@ func (i *interactor) GetPost(userId, postId int) (Post, int, error) {
 		return post, http.StatusInternalServerError, err
 	}
 
-	if isValid := validateUser(userId, post); !isValid {
-		return post, http.StatusUnauthorized, fmt.Errorf("unauthorized")
+	if isValid := i.ValidateUser(userId, post); !isValid {
+		return Post{}, http.StatusUnauthorized, fmt.Errorf("unauthorized")
 	}
 
 	return post, http.StatusOK, nil
@@ -53,22 +54,14 @@ func (i *interactor) GetPostByUserId(userId int) ([]Post, int, error) {
 	return posts, http.StatusOK, nil
 }
 
-func (i *interactor) UpdatePost(postId int, input InputUpdatePost) (Post, int, error) {
-	post, err := i.postRepository.FindByPostId(postId)
-	if err != nil {
-		return post, http.StatusInternalServerError, err
+func (i *interactor) UpdatePost(postId, userId int, post Post) (Post, int, error) {
+	if isValid := i.ValidateUser(userId, post); !isValid {
+		return Post{}, http.StatusUnauthorized, fmt.Errorf("unauthorized")
 	}
 
-	if isValid := validateUser(input.UserId, post); !isValid {
-		return post, http.StatusUnauthorized, fmt.Errorf("unauthorized")
-	}
-
-	post.Content = input.Content
-	post.Title = input.Title
-
-	err = i.postRepository.Update(postId, post)
+	err := i.postRepository.Update(postId, post)
 	if err != nil {
-		return post, http.StatusInternalServerError, err
+		return Post{}, http.StatusInternalServerError, err
 	}
 
 	return post, http.StatusOK, nil
@@ -80,7 +73,7 @@ func (i *interactor) DeletePost(postId, userId int) (int, error) {
 		return http.StatusInternalServerError, err
 	}
 
-	if isValid := validateUser(userId, post); !isValid {
+	if isValid := i.ValidateUser(userId, post); !isValid {
 		return http.StatusUnauthorized, fmt.Errorf("unauthorized")
 	}
 
@@ -92,6 +85,6 @@ func (i *interactor) DeletePost(postId, userId int) (int, error) {
 	return http.StatusOK, nil
 }
 
-func validateUser(userId int, post Post) bool {
+func (i *interactor) ValidateUser(userId int, post Post) bool {
 	return userId == post.UserId
 }

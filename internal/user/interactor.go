@@ -24,7 +24,7 @@ func (i *interactor) CreateUser(user User) (int, error) {
 		return http.StatusInternalServerError, err
 	}
 
-	return http.StatusInternalServerError, nil
+	return http.StatusOK, nil
 }
 
 func (i *interactor) ValidateUser(userId int) (bool, error) {
