@@ -1,6 +1,8 @@
 package helper
 
 import (
+	"errors"
+
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 )
@@ -33,9 +35,11 @@ func GenerateResponseAPI(code int, status string, data any, c *gin.Context, isMi
 
 func ErrorBindingFormatter(err error) []string {
 	var errBindings []string
-
-	for _, e := range err.(validator.ValidationErrors) {
-		errBindings = append(errBindings, e.Error())
+	var ve validator.ValidationErrors
+	if errors.As(err, &ve) {
+		for _, e := range err.(validator.ValidationErrors) {
+			errBindings = append(errBindings, e.Error())
+		}
 	}
 
 	return errBindings
