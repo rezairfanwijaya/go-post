@@ -11,7 +11,7 @@ func NewConnection() (*sql.DB, error) {
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		"127.0.0.1",
 		"5432",
-		"postgres",
+		"rezairfanwijaya",
 		"admin",
 		"article",
 	)
