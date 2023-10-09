@@ -450,7 +450,7 @@ func Test_UpdatePost_GetPostFailed(t *testing.T) {
 		r.ServeHTTP(rec, req)
 
 		assert.Equal(t, bytes.NewBuffer(expectation), rec.Body)
-		assert.Equal(t, http.StatusBadRequest, rec.Code)
+		assert.Equal(t, http.StatusInternalServerError, rec.Code)
 	})
 }
 
