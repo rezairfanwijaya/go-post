@@ -10,7 +10,6 @@ import (
 	postmock "go-post/internal/post/mocks"
 	"go-post/internal/user"
 	usermock "go-post/internal/user/mocks"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -28,17 +27,25 @@ func TestSignUpSuccess(t *testing.T) {
 	auth := auth.NewAuthService()
 	h := handler.NewUserHandler(pInteractor, uInteractor, auth)
 
+	type expectation struct {
+		HttpCode     int
+		BodyResponse []byte
+	}
+
 	testCase := struct {
-		Name         string
-		Input        user.InputUserSignUp
-		ExpectedCode int
+		Name   string
+		Input  user.InputUserSignUp
+		Result expectation
 	}{
 		Name: "success",
 		Input: user.InputUserSignUp{
 			Email:    "test@gmail.com",
 			Password: "123456789",
 		},
-		ExpectedCode: http.StatusOK,
+		Result: expectation{
+			HttpCode:     http.StatusOK,
+			BodyResponse: []byte(`{"meta":{"code":200,"status":"success"},"data":"success"}`),
+		},
 	}
 
 	t.Run(testCase.Name, func(t *testing.T) {
@@ -54,7 +61,8 @@ func TestSignUpSuccess(t *testing.T) {
 
 		r.POST("/users/signup", h.SignUp)
 		r.ServeHTTP(rec, req)
-		assert.Equal(t, testCase.ExpectedCode, rec.Code)
+		assert.Equal(t, bytes.NewBuffer(testCase.Result.BodyResponse), rec.Body)
+		assert.Equal(t, testCase.Result.HttpCode, rec.Code)
 	})
 }
 
@@ -65,16 +73,24 @@ func TestSignUpFailed(t *testing.T) {
 	auth := auth.NewAuthService()
 	h := handler.NewUserHandler(pInteractor, uInteractor, auth)
 
+	type expectation struct {
+		HttpCode     int
+		BodyResponse []byte
+	}
+
 	testCase := struct {
-		Name         string
-		Input        user.InputUserSignUp
-		ExpectedCode int
+		Name   string
+		Input  user.InputUserSignUp
+		Result expectation
 	}{
 		Name: "failed",
 		Input: user.InputUserSignUp{
 			Email: "test@gmail.com",
 		},
-		ExpectedCode: http.StatusInternalServerError,
+		Result: expectation{
+			HttpCode:     http.StatusInternalServerError,
+			BodyResponse: []byte(`{"meta":{"code":500,"status":"error"},"data":{}}`),
+		},
 	}
 
 	t.Run(testCase.Name, func(t *testing.T) {
@@ -90,7 +106,8 @@ func TestSignUpFailed(t *testing.T) {
 
 		r.POST("/users/signup", h.SignUp)
 		r.ServeHTTP(rec, req)
-		assert.Equal(t, testCase.ExpectedCode, rec.Code)
+		assert.Equal(t, bytes.NewBuffer(testCase.Result.BodyResponse), rec.Body)
+		assert.Equal(t, testCase.Result.HttpCode, rec.Code)
 	})
 }
 
@@ -147,17 +164,25 @@ func TestLoginFailed(t *testing.T) {
 	auth := auth.NewAuthService()
 	h := handler.NewUserHandler(pInteractor, uInteractor, auth)
 
+	type expectation struct {
+		HttpCode     int
+		BodyResponse []byte
+	}
+
 	testCase := struct {
-		Name         string
-		Input        user.InputUserLogin
-		ExpectedCode int
+		Name   string
+		Input  user.InputUserLogin
+		Result expectation
 	}{
 		Name: "failed",
 		Input: user.InputUserLogin{
 			Email:    "test@gmail.com",
 			Password: "12345678",
 		},
-		ExpectedCode: http.StatusBadRequest,
+		Result: expectation{
+			HttpCode:     http.StatusBadRequest,
+			BodyResponse: []byte(`{"meta":{"code":400,"status":"error"},"data":"failed"}`),
+		},
 	}
 
 	u := user.User{
@@ -180,7 +205,8 @@ func TestLoginFailed(t *testing.T) {
 
 		r.POST("/users/login", h.Login)
 		r.ServeHTTP(rec, req)
-		assert.Equal(t, testCase.ExpectedCode, rec.Code)
+		assert.Equal(t, bytes.NewBuffer(testCase.Result.BodyResponse), rec.Body)
+		assert.Equal(t, testCase.Result.HttpCode, rec.Code)
 	})
 }
 
@@ -236,7 +262,6 @@ func TestGetUserWithPostsSuccess(t *testing.T) {
 		})
 
 		r.GET("/users/posts", h.GetUserWithPosts)
-
 		r.ServeHTTP(rec, req)
 	})
 }
@@ -287,7 +312,6 @@ func TestGetUserWithPostsFailedFindUser(t *testing.T) {
 		})
 
 		r.GET("/users/posts", h.GetUserWithPosts)
-		log.Println(rec)
 		r.ServeHTTP(rec, req)
 	})
 }
