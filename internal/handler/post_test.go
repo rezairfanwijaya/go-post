@@ -247,3 +247,254 @@ func Test_GetPost_UserFailed(t *testing.T) {
 		assert.Equal(t, http.StatusInternalServerError, rec.Code)
 	})
 }
+
+func Test_DeletePost_Success(t *testing.T) {
+	uInteractor := usermocks.NewInteractor(t)
+	pInteractor := postmocks.NewInteractor(t)
+	h := handler.NewPostHandler(uInteractor, pInteractor)
+
+	expectation := []byte(`{"meta":{"code":200,"status":"success"},"data":"success"}`)
+
+	t.Run("success", func(t *testing.T) {
+		gin.SetMode(gin.TestMode)
+		r := gin.Default()
+		r.Use(func(ctx *gin.Context) {
+			ctx.Set("user", 1)
+		})
+
+		pInteractor.On("DeletePost", 1, 1).Return(http.StatusOK, nil)
+
+		uri := "/posts/1"
+		req := httptest.NewRequest(http.MethodDelete, uri, nil)
+		rec := httptest.NewRecorder()
+
+		r.DELETE("/posts/:id", h.DeletePost)
+		r.ServeHTTP(rec, req)
+
+		assert.Equal(t, bytes.NewBuffer(expectation), rec.Body)
+		assert.Equal(t, http.StatusOK, rec.Code)
+	})
+}
+
+func Test_DeletePost_Failed(t *testing.T) {
+	pInteractor := postmocks.NewInteractor(t)
+	uInteractor := usermocks.NewInteractor(t)
+	h := handler.NewPostHandler(uInteractor, pInteractor)
+
+	expectation := []byte(`{"meta":{"code":500,"status":"error"},"data":"failed"}`)
+
+	t.Run("failed", func(t *testing.T) {
+		gin.SetMode(gin.TestMode)
+		r := gin.Default()
+		r.Use(func(ctx *gin.Context) {
+			ctx.Set("user", 1)
+		})
+
+		t.Run("failed", func(t *testing.T) {
+			pInteractor.On("DeletePost", 1, 1).Return(http.StatusInternalServerError, errors.New("failed"))
+
+			uri := "/posts/1"
+			req := httptest.NewRequest(http.MethodDelete, uri, nil)
+			rec := httptest.NewRecorder()
+
+			r.DELETE("/posts/:id", h.DeletePost)
+			r.ServeHTTP(rec, req)
+
+			assert.Equal(t, bytes.NewBuffer(expectation), rec.Body)
+			assert.Equal(t, http.StatusInternalServerError, rec.Code)
+		})
+	})
+}
+
+func Test_DeletePost_Err_PostId(t *testing.T) {
+	pInteractor := postmocks.NewInteractor(t)
+	uInteractor := usermocks.NewInteractor(t)
+	h := handler.NewPostHandler(uInteractor, pInteractor)
+
+	expectation := []byte(`{"meta":{"code":400,"status":"error in convert id"},"data":"strconv.Atoi: parsing \"jxc\": invalid syntax"}`)
+
+	t.Run("err_post_id", func(t *testing.T) {
+		gin.SetMode(gin.TestMode)
+		r := gin.Default()
+		r.Use(func(ctx *gin.Context) {
+			ctx.Set("user", 1)
+		})
+
+		uri := "/posts/jxc"
+		req := httptest.NewRequest(http.MethodDelete, uri, nil)
+		rec := httptest.NewRecorder()
+
+		r.DELETE("/posts/:id", h.DeletePost)
+		r.ServeHTTP(rec, req)
+
+		assert.Equal(t, bytes.NewBuffer(expectation), rec.Body)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	})
+}
+
+func Test_UpdatePost_Success(t *testing.T) {
+	pInteractor := postmocks.NewInteractor(t)
+	uInteractor := usermocks.NewInteractor(t)
+	h := handler.NewPostHandler(uInteractor, pInteractor)
+
+	input := post.InputUpdatePost{
+		UserId:  1,
+		Title:   "test update",
+		Content: "test update",
+	}
+
+	postById := post.Post{
+		Id:      1,
+		UserId:  1,
+		Title:   "test",
+		Content: "test",
+	}
+
+	postUpdated := post.Post{
+		UserId:  1,
+		Title:   "test update",
+		Content: "test update",
+	}
+
+	expectation := []byte(`{"meta":{"code":200,"status":"success"},"data":{"id":0,"title":"test update","content":"test update"}}`)
+
+	t.Run("success", func(t *testing.T) {
+		gin.SetMode(gin.TestMode)
+		r := gin.Default()
+		r.Use(func(ctx *gin.Context) {
+			ctx.Set("user", 1)
+		})
+
+		pInteractor.On("GetPost", 1, 1).Return(postById, http.StatusOK, nil)
+		pInteractor.On("UpdatePost", 1, 1, mock.AnythingOfType("Post")).Return(postUpdated, http.StatusOK, nil)
+
+		uri := "/posts/1"
+		inputJson, err := json.Marshal(input)
+		assert.NoError(t, err)
+		req := httptest.NewRequest(http.MethodPut, uri, bytes.NewBuffer([]byte(inputJson)))
+		rec := httptest.NewRecorder()
+
+		r.PUT("/posts/:id", h.UpdatePost)
+		r.ServeHTTP(rec, req)
+
+		assert.Equal(t, bytes.NewBuffer(expectation), rec.Body)
+		assert.Equal(t, http.StatusOK, rec.Code)
+	})
+}
+
+func Test_UpdatePost_Err_PostId(t *testing.T) {
+	pInteractor := postmocks.NewInteractor(t)
+	uInteractor := usermocks.NewInteractor(t)
+	h := handler.NewPostHandler(uInteractor, pInteractor)
+
+	input := post.InputUpdatePost{
+		UserId:  1,
+		Title:   "test update",
+		Content: "test update",
+	}
+
+	expectation := []byte(`{"meta":{"code":400,"status":"error in convert id"},"data":"strconv.Atoi: parsing \"xcv\": invalid syntax"}`)
+
+	t.Run("err_post_id", func(t *testing.T) {
+		gin.SetMode(gin.TestMode)
+		r := gin.Default()
+		r.Use(func(ctx *gin.Context) {
+			ctx.Set("user", 1)
+		})
+
+		uri := "/posts/xcv"
+		inputJson, err := json.Marshal(input)
+		assert.NoError(t, err)
+
+		req := httptest.NewRequest(http.MethodPut, uri, bytes.NewBuffer(inputJson))
+		rec := httptest.NewRecorder()
+
+		r.PUT("/posts/:id", h.UpdatePost)
+		r.ServeHTTP(rec, req)
+
+		assert.Equal(t, bytes.NewBuffer(expectation), rec.Body)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	})
+}
+
+func Test_UpdatePost_GetPostFailed(t *testing.T) {
+	pInteractor := postmocks.NewInteractor(t)
+	uInteractor := usermocks.NewInteractor(t)
+	h := handler.NewPostHandler(uInteractor, pInteractor)
+
+	input := post.InputUpdatePost{
+		UserId:  1,
+		Title:   "test update",
+		Content: "test update",
+	}
+
+	expectation := []byte(`{"meta":{"code":500,"status":"error"},"data":"failed"}`)
+
+	t.Run("update_getpost_failed", func(t *testing.T) {
+		gin.SetMode(gin.TestMode)
+		r := gin.Default()
+		r.Use(func(ctx *gin.Context) {
+			ctx.Set("user", 1)
+		})
+
+		uri := "/posts/1"
+		inputJson, err := json.Marshal(input)
+		assert.NoError(t, err)
+
+		pInteractor.On("GetPost", 1, 1).Return(post.Post{}, http.StatusInternalServerError, errors.New("failed"))
+
+		req := httptest.NewRequest(http.MethodPut, uri, bytes.NewBuffer(inputJson))
+		rec := httptest.NewRecorder()
+
+		r.PUT("/posts/:id", h.UpdatePost)
+		r.ServeHTTP(rec, req)
+
+		assert.Equal(t, bytes.NewBuffer(expectation), rec.Body)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	})
+}
+
+func Test_UpdatePost_Failed(t *testing.T) {
+	pInteractor := postmocks.NewInteractor(t)
+	uInteractor := usermocks.NewInteractor(t)
+	h := handler.NewPostHandler(uInteractor, pInteractor)
+
+	input := post.InputUpdatePost{
+		UserId:  1,
+		Title:   "test update",
+		Content: "test update",
+	}
+
+	postById := post.Post{
+		Id:      1,
+		UserId:  1,
+		Title:   "test",
+		Content: "test",
+	}
+
+	expectation := []byte(`{"meta":{"code":500,"status":"error"},"data":"failed"}`)
+
+	t.Run("failed", func(t *testing.T) {
+		gin.SetMode(gin.TestMode)
+		r := gin.Default()
+		r.Use(func(ctx *gin.Context) {
+			ctx.Set("user", 1)
+		})
+
+		uri := "/posts/1"
+		inputJson, err := json.Marshal(input)
+		assert.NoError(t, err)
+
+		pInteractor.On("GetPost", 1, 1).Return(postById, http.StatusOK, nil)
+		pInteractor.On("UpdatePost", 1, 1, mock.AnythingOfType("Post")).Return(post.Post{}, http.StatusInternalServerError, errors.New("failed"))
+
+		req := httptest.NewRequest(http.MethodPut, uri, bytes.NewBuffer(inputJson))
+		rec := httptest.NewRecorder()
+
+		r.PUT("/posts/:id", h.UpdatePost)
+		r.ServeHTTP(rec, req)
+
+		assert.Equal(t, bytes.NewBuffer(expectation), rec.Body)
+		assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	})
+}
