@@ -4,15 +4,21 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
 func NewConnection() (*sql.DB, error) {
+	env, err := godotenv.Read("../.env")
+	if err != nil {
+		return &sql.DB{}, err
+	}
+
 	dsn := fmt.Sprintf("host=%s port=%s user=%s  dbname=%s sslmode=disable",
-		"127.0.0.1",
-		"5432",
-		"rezairfanwijaya",
-		"article",
+		env["HOST"],
+		env["PORT"],
+		env["USER"],
+		env["DBNAME"],
 	)
 
 	db, err := sql.Open("postgres", dsn)
