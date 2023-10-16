@@ -3,7 +3,7 @@ package user
 import "net/http"
 
 type Interactor interface {
-	CreateUser(user User) (int, error)
+	CreateUser(user User) (User, int, error)
 	ValidateUser(userId int) (bool, error)
 	GetUserById(userId int) (User, int, error)
 	GetUserByEmail(email string) (User, int, error)
@@ -19,12 +19,13 @@ func NewInteractor(userRepo UserRepository) *interactor {
 	}
 }
 
-func (i *interactor) CreateUser(user User) (int, error) {
-	if err := i.userRepo.Save(user); err != nil {
-		return http.StatusInternalServerError, err
+func (i *interactor) CreateUser(user User) (User, int, error) {
+	user, err := i.userRepo.Save(user)
+	if err != nil {
+		return user, http.StatusInternalServerError, err
 	}
 
-	return http.StatusOK, nil
+	return user, http.StatusOK, nil
 }
 
 func (i *interactor) ValidateUser(userId int) (bool, error) {

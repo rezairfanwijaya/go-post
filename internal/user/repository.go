@@ -2,10 +2,11 @@ package user
 
 import (
 	"database/sql"
+	"log"
 )
 
 type UserRepository interface {
-	Save(user User) error
+	Save(user User) (User, error)
 	FindByEmail(email string) (User, error)
 	FindById(userId int) (User, error)
 }
@@ -20,17 +21,18 @@ func NewRepositoryUser(db *sql.DB) UserRepository {
 	}
 }
 
-func (r *userRepository) Save(user User) error {
+func (r *userRepository) Save(user User) (User, error) {
+	res := User{}
 	query := `
-		INSERT INTO users (email, password) VALUES ($1, $2)
+		INSERT INTO users (email, password) VALUES ($1, $2) RETURNING *
 	`
-
-	if _, err := r.db.Exec(query, user.Email, user.Password); err != nil {
-		return err
+	row := r.db.QueryRow(query, user.Email, user.Password)
+	if err := row.Scan(&res.Id, &res.Email, &res.Password); err != nil {
+		return res, err
 	}
 
-	return nil
-
+	log.Println(res)
+	return res, nil
 }
 
 func (r *userRepository) FindByEmail(email string) (User, error) {

@@ -8,8 +8,8 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func NewConnection() (*sql.DB, error) {
-	env, err := godotenv.Read("../.env")
+func NewConnection(path string) (*sql.DB, error) {
+	env, err := godotenv.Read(path)
 	if err != nil {
 		return &sql.DB{}, err
 	}

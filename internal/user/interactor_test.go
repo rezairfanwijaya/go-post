@@ -40,13 +40,13 @@ func TestCreateUser(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.Name, func(t *testing.T) {
 			if !testCase.WantErr {
-				repo.On("Save", testCase.User).Return(nil)
-				httpCode, err := interactor.CreateUser(testCase.User)
+				repo.On("Save", testCase.User).Return(testCase.User, nil)
+				_, httpCode, err := interactor.CreateUser(testCase.User)
 				assert.Nil(t, err)
 				assert.Equal(t, testCase.HttpCode, httpCode)
 			} else {
-				repo.On("Save", testCase.User).Return(errors.New("failed"))
-				httpCode, err := interactor.CreateUser(testCase.User)
+				repo.On("Save", testCase.User).Return(testCase.User, errors.New("failed"))
+				_, httpCode, err := interactor.CreateUser(testCase.User)
 				assert.NotNil(t, err)
 				assert.Equal(t, testCase.HttpCode, httpCode)
 			}

@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	db, err := database.NewConnection()
+	db, err := database.NewConnection("./.env")
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -14,27 +14,34 @@ type Interactor struct {
 }
 
 // CreateUser provides a mock function with given fields: _a0
-func (_m *Interactor) CreateUser(_a0 user.User) (int, error) {
+func (_m *Interactor) CreateUser(_a0 user.User) (user.User, int, error) {
 	ret := _m.Called(_a0)
 
-	var r0 int
-	var r1 error
-	if rf, ok := ret.Get(0).(func(user.User) (int, error)); ok {
+	var r0 user.User
+	var r1 int
+	var r2 error
+	if rf, ok := ret.Get(0).(func(user.User) (user.User, int, error)); ok {
 		return rf(_a0)
 	}
-	if rf, ok := ret.Get(0).(func(user.User) int); ok {
+	if rf, ok := ret.Get(0).(func(user.User) user.User); ok {
 		r0 = rf(_a0)
 	} else {
-		r0 = ret.Get(0).(int)
+		r0 = ret.Get(0).(user.User)
 	}
 
-	if rf, ok := ret.Get(1).(func(user.User) error); ok {
+	if rf, ok := ret.Get(1).(func(user.User) int); ok {
 		r1 = rf(_a0)
 	} else {
-		r1 = ret.Error(1)
+		r1 = ret.Get(1).(int)
 	}
 
-	return r0, r1
+	if rf, ok := ret.Get(2).(func(user.User) error); ok {
+		r2 = rf(_a0)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // GetUserByEmail provides a mock function with given fields: email

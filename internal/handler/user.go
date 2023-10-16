@@ -49,13 +49,13 @@ func (h *userHandler) SignUp(c *gin.Context) {
 	newUser.Email = input.Email
 	newUser.Password = string(passwordHashed)
 
-	httpCode, err := h.userInteractor.CreateUser(newUser)
+	user, httpCode, err := h.userInteractor.CreateUser(newUser)
 	if err != nil {
 		helper.GenerateResponseAPI(httpCode, "error", err, c, false)
 		return
 	}
 
-	helper.GenerateResponseAPI(http.StatusOK, "success", "success", c, false)
+	helper.GenerateResponseAPI(http.StatusOK, "success", user, c, false)
 }
 
 func (h *userHandler) Login(c *gin.Context) {
