@@ -5,7 +5,7 @@ import (
 )
 
 type PostRepository interface {
-	Save(post Post) error
+	Save(post Post) (Post, error)
 	FindByPostId(postId int) (Post, error)
 	FindByUserId(userId int) ([]Post, error)
 	Delete(postId int) error
@@ -22,18 +22,19 @@ func NewPostRepository(db *sql.DB) PostRepository {
 	}
 }
 
-func (r *postRepository) Save(post Post) error {
+func (r *postRepository) Save(post Post) (Post, error) {
+	res := Post{}
 	query := `
-		INSERT into posts (user_id, title, content) VALUES ($1, $2, $3)
+		INSERT into posts (user_id, title, content) VALUES ($1, $2, $3) RETURNING *
 	`
 
-	_, err := r.db.Exec(query, post.UserId, post.Title, post.Content)
-	if err != nil {
-		return err
+	row := r.db.QueryRow(query, post.UserId, post.Title, post.Content)
+
+	if err := row.Scan(&res.Id, &res.UserId, &res.Title, &res.Content); err != nil {
+		return res, err
 	}
 
-	return nil
-
+	return res, nil
 }
 
 func (r *postRepository) FindByPostId(postId int) (Post, error) {

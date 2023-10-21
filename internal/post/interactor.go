@@ -25,7 +25,8 @@ func NewInteractor(postRepository PostRepository) Interactor {
 }
 
 func (i *interactor) CreatePost(post Post) (int, error) {
-	if err := i.postRepository.Save(post); err != nil {
+	_, err := i.postRepository.Save(post)
+	if err != nil {
 		return http.StatusInternalServerError, err
 	}
 

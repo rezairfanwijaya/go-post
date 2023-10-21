@@ -78,17 +78,27 @@ func (_m *PostRepository) FindByUserId(userId int) ([]post.Post, error) {
 }
 
 // Save provides a mock function with given fields: _a0
-func (_m *PostRepository) Save(_a0 post.Post) error {
+func (_m *PostRepository) Save(_a0 post.Post) (post.Post, error) {
 	ret := _m.Called(_a0)
 
-	var r0 error
-	if rf, ok := ret.Get(0).(func(post.Post) error); ok {
+	var r0 post.Post
+	var r1 error
+	if rf, ok := ret.Get(0).(func(post.Post) (post.Post, error)); ok {
+		return rf(_a0)
+	}
+	if rf, ok := ret.Get(0).(func(post.Post) post.Post); ok {
 		r0 = rf(_a0)
 	} else {
-		r0 = ret.Error(0)
+		r0 = ret.Get(0).(post.Post)
 	}
 
-	return r0
+	if rf, ok := ret.Get(1).(func(post.Post) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // Update provides a mock function with given fields: postId, _a1

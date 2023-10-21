@@ -2,7 +2,6 @@ package user
 
 import (
 	"database/sql"
-	"log"
 )
 
 type UserRepository interface {
@@ -31,7 +30,6 @@ func (r *userRepository) Save(user User) (User, error) {
 		return res, err
 	}
 
-	log.Println(res)
 	return res, nil
 }
 

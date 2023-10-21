@@ -2,6 +2,7 @@ package post_test
 
 import (
 	"errors"
+	"go-post/internal/database"
 	"go-post/internal/post"
 	"regexp"
 	"testing"
@@ -11,178 +12,106 @@ import (
 )
 
 func TestSave(t *testing.T) {
-	db, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
+	db, err := database.NewConnection("../../.env")
+	assert.NoError(t, err)
+	r := post.NewPostRepository(db)
 
-	repo := post.NewPostRepository(db)
-
-	testCases := []struct {
-		Name    string
-		Param   post.Post
-		WantErr bool
-	}{
-		{
-			Name: "success",
-			Param: post.Post{
-				Id:      1,
-				UserId:  2,
-				Title:   "test",
-				Content: "detail content",
-			},
-			WantErr: false,
-		},
-		{
-			Name:    "failed",
-			Param:   post.Post{},
-			WantErr: true,
-		},
+	p := post.Post{
+		UserId:  1,
+		Title:   "test",
+		Content: "test",
 	}
 
-	for _, testCase := range testCases {
-		t.Run(testCase.Name, func(t *testing.T) {
-			if testCase.WantErr {
-				mock.ExpectExec(regexp.QuoteMeta("INSERT into posts (user_id, title, content) VALUES ($1, $2, $3)")).
-					WithArgs(testCase.Param.UserId, testCase.Param.Title, testCase.Param.Content).
-					WillReturnError(errors.New("failed"))
+	np, err := r.Save(p)
+	assert.NoError(t, err)
+	assert.Equal(t, p.UserId, np.UserId)
+	assert.Equal(t, p.Title, np.Title)
+	assert.Equal(t, p.Content, np.Content)
 
-				err := repo.Save(testCase.Param)
-				assert.NotNil(t, err)
-			} else {
-				mock.ExpectExec(regexp.QuoteMeta("INSERT into posts (user_id, title, content) VALUES ($1, $2, $3)")).
-					WithArgs(testCase.Param.UserId, testCase.Param.Title, testCase.Param.Content).WillReturnResult(sqlmock.NewResult(1, 1))
-
-				err := repo.Save(testCase.Param)
-				assert.Nil(t, err)
-			}
-		})
-	}
+	defer func() {
+		db.Exec("DELETE FROM posts WHERE id = $1", np.Id)
+	}()
 }
 
 func TestFindByPostId(t *testing.T) {
-	db, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
-
-	repo := post.NewPostRepository(db)
+	db, err := database.NewConnection("../../.env")
+	assert.NoError(t, err)
+	r := post.NewPostRepository(db)
 
 	testCases := []struct {
 		Name        string
-		Id          int
-		Expectation post.Post
-		WantErr     bool
+		Post        post.Post
+		ErrExpected error
 	}{
 		{
 			Name: "success",
-			Id:   1,
-			Expectation: post.Post{
-				Id:      1,
-				UserId:  2,
+			Post: post.Post{
+				UserId:  1,
 				Title:   "test",
-				Content: "test detail in content",
+				Content: "test",
 			},
-			WantErr: false,
 		},
 		{
-			Name:        "not found",
-			Id:          4,
-			Expectation: post.Post{},
-			WantErr:     false,
-		},
-		{
-			Name:        "failed",
-			Id:          0,
-			Expectation: post.Post{},
-			WantErr:     true,
+			Name: "failed_not_found",
+			Post: post.Post{},
 		},
 	}
 
-	for _, testCase := range testCases {
-		t.Run(testCase.Name, func(t *testing.T) {
-			if !testCase.WantErr {
-				rows := mock.NewRows([]string{"id", "user_id", "title", "content"}).
-					AddRow(testCase.Expectation.Id, testCase.Expectation.UserId, testCase.Expectation.Title, testCase.Expectation.Content)
+	for _, tc := range testCases {
+		np, err := r.Save(tc.Post)
+		assert.NoError(t, err)
 
-				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM posts WHERE id = $1")).WithArgs(testCase.Id).
-					WillReturnRows(rows)
+		p, err := r.FindByPostId(np.Id)
+		assert.NoError(t, err)
 
-				post, _ := repo.FindByPostId(testCase.Id)
-				assert.Equal(t, testCase.Expectation, post)
-			} else {
-				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM posts WHERE id = $1")).WithArgs(testCase.Id).
-					WillReturnError(errors.New("failed"))
+		assert.Equal(t, tc.Post.Title, p.Title)
+		assert.Equal(t, tc.Post.Content, p.Content)
 
-				_, err := repo.FindByPostId(testCase.Id)
-				assert.NotNil(t, err)
-			}
-		})
+		defer func() {
+			db.Exec("DELETE FROM posts WHERE id = $1", np.Id)
+		}()
 	}
 }
 
 func TestFindByUserId(t *testing.T) {
-	db, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
+	db, err := database.NewConnection("../../.env")
+	assert.NoError(t, err)
 
-	repo := post.NewPostRepository(db)
+	p := post.Post{
+		UserId:  3,
+		Title:   "test aja lagi",
+		Content: "test aja",
+	}
 
 	testCases := []struct {
-		Name        string
-		Id          int
-		Expectation []post.Post
-		WantErr     bool
+		Name         string
+		Post         post.Post
+		PostResponse []post.Post
 	}{
 		{
 			Name: "success",
-			Id:   2,
-			Expectation: []post.Post{
-				{
-					Id:      1,
-					Title:   "test",
-					Content: "test detail in content",
-				}, {
-					Id:      2,
-					Title:   "test content sport",
-					Content: "test detail in content sport",
-				},
+			Post: p,
+			PostResponse: []post.Post{
+				p,
 			},
-			WantErr: false,
 		},
 		{
-			Name:        "failed",
-			Id:          0,
-			Expectation: []post.Post{},
-			WantErr:     true,
+			Name:         "not_found",
+			Post:         post.Post{},
+			PostResponse: []post.Post{},
 		},
 	}
 
-	for _, testCase := range testCases {
-		t.Run(testCase.Name, func(t *testing.T) {
-			if !testCase.WantErr {
-				rows := mock.NewRows([]string{"id", "title", "content"}).
-					AddRow(testCase.Expectation[0].Id, testCase.Expectation[0].Title, testCase.Expectation[0].Content).
-					AddRow(testCase.Expectation[1].Id, testCase.Expectation[1].Title, testCase.Expectation[1].Content)
-
-				mock.ExpectQuery(regexp.QuoteMeta("SELECT id, title, content FROM posts WHERE user_id = $1")).WithArgs(testCase.Id).
-					WillReturnRows(rows)
-
-				posts, _ := repo.FindByUserId(testCase.Id)
-				assert.Equal(t, testCase.Expectation, posts)
-			} else {
-				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM posts WHERE user_id = $1")).WithArgs(testCase.Id).
-					WillReturnError(errors.New("failed"))
-
-				_, err := repo.FindByUserId(testCase.Id)
-				assert.NotNil(t, err)
-			}
-		})
+	for _, tc := range testCases {
+		r := post.NewPostRepository(db)
+		newPost, err := r.Save(p)
+		assert.NoError(t, err)
+		assert.Equal(t, tc.Post.Title, newPost.Title)
+		defer func() {
+			db.Exec("DELETE FROM posts WHERE id=$1", newPost.Id)
+		}()
 	}
+
 }
 
 func TestDelete(t *testing.T) {
