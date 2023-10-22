@@ -79,8 +79,8 @@ func TestFindByUserId(t *testing.T) {
 
 	p := post.Post{
 		UserId:  3,
-		Title:   "test aja lagi",
-		Content: "test aja",
+		Title:   "this is title",
+		Content: "this content",
 	}
 
 	testCases := []struct {
@@ -104,10 +104,10 @@ func TestFindByUserId(t *testing.T) {
 
 	for _, tc := range testCases {
 		r := post.NewPostRepository(db)
-		newPost, err := r.Save(p)
+		newPost, err := r.Save(tc.Post)
 		assert.NoError(t, err)
 		assert.Equal(t, tc.Post.Title, newPost.Title)
-		defer func() {
+		func() {
 			db.Exec("DELETE FROM posts WHERE id=$1", newPost.Id)
 		}()
 	}
@@ -115,46 +115,20 @@ func TestFindByUserId(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	db, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
+	db, err := database.NewConnection("../../.env")
+	assert.NoError(t, err)
 
-	repo := post.NewPostRepository(db)
-
-	testCases := []struct {
-		Name    string
-		Param   int
-		WantErr bool
-	}{
-		{
-			Name:    "success",
-			Param:   1,
-			WantErr: false,
-		},
-		{
-			Name:    "failed",
-			Param:   0,
-			WantErr: true,
-		},
+	p := post.Post{
+		UserId:  3,
+		Title:   "this is title",
+		Content: "this content",
 	}
 
-	for _, testCase := range testCases {
-		if !testCase.WantErr {
-			mock.ExpectExec(regexp.QuoteMeta("DELETE FROM posts WHERE id = $1")).WithArgs(testCase.Param).
-				WillReturnResult(sqlmock.NewResult(0, 1))
-
-			err := repo.Delete(testCase.Param)
-			assert.Nil(t, err)
-		} else {
-			mock.ExpectExec(regexp.QuoteMeta("DELETE FROM posts WHERE id = $1")).WithArgs(testCase.Param).
-				WillReturnError(errors.New("failed"))
-
-			err := repo.Delete(testCase.Param)
-			assert.NotNil(t, err)
-		}
-	}
+	r := post.NewPostRepository(db)
+	newPost, err := r.Save(p)
+	assert.NoError(t, err)
+	err = r.Delete(newPost.Id)
+	assert.NoError(t, err)
 }
 
 func TestUpdate(t *testing.T) {
