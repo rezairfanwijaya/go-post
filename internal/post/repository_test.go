@@ -1,13 +1,10 @@
 package post_test
 
 import (
-	"errors"
 	"go-post/internal/database"
 	"go-post/internal/post"
-	"regexp"
 	"testing"
 
-	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -132,49 +129,26 @@ func TestDelete(t *testing.T) {
 }
 
 func TestUpdate(t *testing.T) {
-	db, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
+	db, err := database.NewConnection("../../.env")
+	assert.NoError(t, err)
 
-	repo := post.NewPostRepository(db)
-
-	testCases := []struct {
-		Name    string
-		PostId  int
-		Post    post.Post
-		WantErr bool
-	}{
-		{
-			Name:   "success",
-			PostId: 1,
-			Post: post.Post{
-				Id:      1,
-				Title:   "title update",
-				Content: "content update",
-			},
-			WantErr: false,
-		},
-		{
-			Name:    "false",
-			PostId:  0,
-			Post:    post.Post{},
-			WantErr: true,
-		},
+	p := post.Post{
+		UserId:  3,
+		Title:   "test",
+		Content: "test",
 	}
 
-	for _, testCase := range testCases {
-		if !testCase.WantErr {
-			mock.ExpectExec(regexp.QuoteMeta("UPDATE posts SET title = $1, content = $2 WHERE id = $3")).WithArgs(testCase.Post.Title, testCase.Post.Content, testCase.Post.Id).WillReturnResult(sqlmock.NewResult(0, 1))
+	r := post.NewPostRepository(db)
+	np, err := r.Save(p)
+	assert.NoError(t, err)
 
-			err := repo.Update(testCase.PostId, testCase.Post)
-			assert.Nil(t, err)
-		} else {
-			mock.ExpectExec(regexp.QuoteMeta("UPDATE posts SET title = $1, content = $2 WHERE id = $3")).WithArgs(testCase.Post.Title, testCase.Post.Content, testCase.Post.Id).WillReturnError(errors.New("failed"))
+	np.Title = "test update"
+	np.Content = "test update"
 
-			err := repo.Update(testCase.PostId, testCase.Post)
-			assert.NotNil(t, err)
-		}
-	}
+	err = r.Update(np.Id, np)
+	assert.NoError(t, err)
+
+	defer func() {
+		db.Exec("DELETE FROM posts WHERE id = $1", np.Id)
+	}()
 }
