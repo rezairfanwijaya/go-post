@@ -11,14 +11,11 @@ import (
 )
 
 func TestCreateUser(t *testing.T) {
-	repo := mocks.NewUserRepository(t)
-	interactor := user.NewInteractor(repo)
-
 	testCases := []struct {
 		Name     string
 		User     user.User
 		HttpCode int
-		WantErr  bool
+		Error    error
 	}{
 		{
 			Name: "success",
@@ -27,43 +24,36 @@ func TestCreateUser(t *testing.T) {
 				Password: "djbgj121-232j",
 			},
 			HttpCode: http.StatusOK,
-			WantErr:  false,
 		},
 		{
 			Name:     "failed",
 			User:     user.User{},
 			HttpCode: http.StatusInternalServerError,
-			WantErr:  true,
+			Error:    errors.New("failed"),
 		},
 	}
 
-	for _, testCase := range testCases {
-		t.Run(testCase.Name, func(t *testing.T) {
-			if !testCase.WantErr {
-				repo.On("Save", testCase.User).Return(testCase.User, nil)
-				_, httpCode, err := interactor.CreateUser(testCase.User)
-				assert.Nil(t, err)
-				assert.Equal(t, testCase.HttpCode, httpCode)
-			} else {
-				repo.On("Save", testCase.User).Return(testCase.User, errors.New("failed"))
-				_, httpCode, err := interactor.CreateUser(testCase.User)
-				assert.NotNil(t, err)
-				assert.Equal(t, testCase.HttpCode, httpCode)
-			}
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			repo := mocks.NewUserRepository(t)
+			interactor := user.NewInteractor(repo)
+
+			repo.On("Save", tc.User).Return(tc.User, tc.Error)
+			res, httpCode, err := interactor.CreateUser(tc.User)
+			assert.Equal(t, tc.Error, err)
+			assert.Equal(t, tc.User, res)
+			assert.Equal(t, tc.HttpCode, httpCode)
 		})
 	}
 }
 
 func TestValidateUser(t *testing.T) {
-	repo := mocks.NewUserRepository(t)
-	interactor := user.NewInteractor(repo)
-
 	testCases := []struct {
 		Name    string
 		UserId  int
 		User    user.User
 		IsValid bool
-		WantErr bool
+		Error   error
 	}{
 		{
 			Name:   "success",
@@ -74,44 +64,36 @@ func TestValidateUser(t *testing.T) {
 				Password: "jdfbjfbj",
 			},
 			IsValid: true,
-			WantErr: false,
 		},
 		{
 			Name:    "failed",
 			UserId:  4,
 			User:    user.User{},
 			IsValid: false,
-			WantErr: true,
+			Error:   errors.New("failed"),
 		},
 	}
 
-	for _, testCase := range testCases {
-		t.Run(testCase.Name, func(t *testing.T) {
-			if !testCase.WantErr {
-				repo.On("FindById", testCase.UserId).Return(testCase.User, nil)
-				isValid, err := interactor.ValidateUser(testCase.UserId)
-				assert.Equal(t, testCase.IsValid, isValid)
-				assert.Nil(t, err)
-			} else {
-				repo.On("FindById", testCase.UserId).Return(testCase.User, errors.New("failed"))
-				isValid, err := interactor.ValidateUser(testCase.UserId)
-				assert.Equal(t, isValid, testCase.IsValid)
-				assert.NotNil(t, err)
-			}
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			repo := mocks.NewUserRepository(t)
+			interactor := user.NewInteractor(repo)
+
+			repo.On("FindById", tc.UserId).Return(tc.User, tc.Error)
+			res, err := interactor.ValidateUser(tc.UserId)
+			assert.Equal(t, tc.Error, err)
+			assert.Equal(t, tc.IsValid, res)
 		})
 	}
 }
 
 func TestGetUserById(t *testing.T) {
-	repo := mocks.NewUserRepository(t)
-	interactor := user.NewInteractor(repo)
-
 	testCases := []struct {
 		Name     string
 		UserId   int
 		User     user.User
 		HttpCode int
-		WantErr  bool
+		Error    error
 	}{
 		{
 			Name:   "success",
@@ -122,44 +104,37 @@ func TestGetUserById(t *testing.T) {
 				Password: "fjbdjfb232j",
 			},
 			HttpCode: http.StatusOK,
-			WantErr:  false,
 		},
 		{
 			Name:     "failed",
 			UserId:   1,
 			User:     user.User{},
 			HttpCode: http.StatusInternalServerError,
-			WantErr:  true,
+			Error:    errors.New("failed"),
 		},
 	}
 
-	for _, testCase := range testCases {
-		if !testCase.WantErr {
-			repo.On("FindById", testCase.UserId).Return(testCase.User, nil)
-			user, httpCode, err := interactor.GetUserById(testCase.UserId)
-			assert.Equal(t, testCase.User, user)
-			assert.Equal(t, testCase.HttpCode, httpCode)
-			assert.Nil(t, err)
-		} else {
-			repo.On("FindById", testCase.UserId).Return(testCase.User, errors.New("failed"))
-			user, httpCode, err := interactor.GetUserById(testCase.UserId)
-			assert.Equal(t, testCase.User, user)
-			assert.Equal(t, testCase.HttpCode, httpCode)
-			assert.NotNil(t, err)
-		}
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			repo := mocks.NewUserRepository(t)
+			interactor := user.NewInteractor(repo)
+
+			repo.On("FindById", tc.UserId).Return(tc.User, tc.Error)
+			res, httpCode, err := interactor.GetUserById(tc.UserId)
+			assert.Equal(t, tc.Error, err)
+			assert.Equal(t, tc.HttpCode, httpCode)
+			assert.Equal(t, tc.User, res)
+		})
 	}
 }
 
 func TestGetUserByEmail(t *testing.T) {
-	repo := mocks.NewUserRepository(t)
-	interactor := user.NewInteractor(repo)
-
 	testCases := []struct {
 		Name     string
 		Email    string
 		User     user.User
 		HttpCode int
-		WantErr  bool
+		Error    error
 	}{
 		{
 			Name:  "success",
@@ -170,32 +145,26 @@ func TestGetUserByEmail(t *testing.T) {
 				Password: "fnjdfbdj",
 			},
 			HttpCode: http.StatusOK,
-			WantErr:  false,
 		},
 		{
 			Name:     "failed",
 			Email:    "another@gmail.com",
 			User:     user.User{},
 			HttpCode: http.StatusInternalServerError,
-			WantErr:  true,
+			Error:    errors.New("failed"),
 		},
 	}
 
-	for _, testCase := range testCases {
-		t.Run(testCase.Name, func(t *testing.T) {
-			if !testCase.WantErr {
-				repo.On("FindByEmail", testCase.Email).Return(testCase.User, nil)
-				user, httpCode, err := interactor.GetUserByEmail(testCase.Email)
-				assert.Equal(t, testCase.User, user)
-				assert.Equal(t, testCase.HttpCode, httpCode)
-				assert.Nil(t, err)
-			} else {
-				repo.On("FindByEmail", testCase.Email).Return(testCase.User, errors.New("failed"))
-				user, httpCode, err := interactor.GetUserByEmail(testCase.Email)
-				assert.Equal(t, testCase.User, user)
-				assert.Equal(t, testCase.HttpCode, httpCode)
-				assert.NotNil(t, err)
-			}
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			repo := mocks.NewUserRepository(t)
+			interactor := user.NewInteractor(repo)
+
+			repo.On("FindByEmail", tc.Email).Return(tc.User, tc.Error)
+			res, httpCode, err := interactor.GetUserByEmail(tc.Email)
+			assert.Equal(t, tc.Error, err)
+			assert.Equal(t, tc.HttpCode, httpCode)
+			assert.Equal(t, tc.User, res)
 		})
 	}
 }
