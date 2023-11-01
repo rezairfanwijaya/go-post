@@ -18,6 +18,7 @@ type interactor struct {
 var (
 	ErrorDatabaseFailure = errors.New("unknown error occurred")
 	ErrorAuth            = errors.New("error access denied")
+	ErrorUserNotFound    = errors.New("user not found")
 )
 
 func NewInteractor(userRepo UserRepository) *interactor {
@@ -60,7 +61,7 @@ func (i *interactor) GetUserById(userId int) (User, error) {
 func (i *interactor) GetUserByEmail(email string) (User, error) {
 	user, err := i.userRepo.FindByEmail(email)
 	if err != nil {
-		return user, ErrorDatabaseFailure
+		return user, ErrorUserNotFound
 	}
 
 	return user, nil

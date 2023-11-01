@@ -66,7 +66,7 @@ func (h *postHandler) GetPost(c *gin.Context) {
 		return
 	}
 
-	user, httpCode, err := h.userInteractor.GetUserById(userId)
+	user, err := h.userInteractor.GetUserById(userId)
 	if err != nil {
 		helper.GenerateResponseAPI(httpCode, "error", err.Error(), c, false)
 		return

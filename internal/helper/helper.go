@@ -13,14 +13,12 @@ type responseAPI struct {
 }
 
 type meta struct {
-	Code   int    `json:"code"`
 	Status string `json:"status"`
 }
 
 func GenerateResponseAPI(code int, status string, data any, c *gin.Context, isMiddleware bool) {
 	response := responseAPI{
 		Meta: meta{
-			Code:   code,
 			Status: status,
 		},
 		Data: data,
