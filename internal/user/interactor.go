@@ -1,17 +1,24 @@
 package user
 
-import "net/http"
+import (
+	"errors"
+)
 
 type Interactor interface {
-	CreateUser(user User) (User, int, error)
+	CreateUser(user User) (User, error)
 	ValidateUser(userId int) (bool, error)
-	GetUserById(userId int) (User, int, error)
-	GetUserByEmail(email string) (User, int, error)
+	GetUserById(userId int) (User, error)
+	GetUserByEmail(email string) (User, error)
 }
 
 type interactor struct {
 	userRepo UserRepository
 }
+
+var (
+	ErrorDatabaseFailure = errors.New("unknown error occurred")
+	ErrorAuth            = errors.New("error access denied")
+)
 
 func NewInteractor(userRepo UserRepository) *interactor {
 	return &interactor{
@@ -19,13 +26,13 @@ func NewInteractor(userRepo UserRepository) *interactor {
 	}
 }
 
-func (i *interactor) CreateUser(user User) (User, int, error) {
+func (i *interactor) CreateUser(user User) (User, error) {
 	user, err := i.userRepo.Save(user)
 	if err != nil {
-		return user, http.StatusInternalServerError, err
+		return user, ErrorDatabaseFailure
 	}
 
-	return user, http.StatusOK, nil
+	return user, nil
 }
 
 func (i *interactor) ValidateUser(userId int) (bool, error) {
@@ -34,23 +41,27 @@ func (i *interactor) ValidateUser(userId int) (bool, error) {
 		return false, err
 	}
 
-	return user.Id != 0, nil
+	if user.Id == 0 {
+		return false, ErrorAuth
+	}
+
+	return true, nil
 }
 
-func (i *interactor) GetUserById(userId int) (User, int, error) {
+func (i *interactor) GetUserById(userId int) (User, error) {
 	user, err := i.userRepo.FindById(userId)
 	if err != nil {
-		return user, http.StatusInternalServerError, err
+		return user, ErrorDatabaseFailure
 	}
 
-	return user, http.StatusOK, nil
+	return user, nil
 }
 
-func (i *interactor) GetUserByEmail(email string) (User, int, error) {
+func (i *interactor) GetUserByEmail(email string) (User, error) {
 	user, err := i.userRepo.FindByEmail(email)
 	if err != nil {
-		return user, http.StatusInternalServerError, err
+		return user, ErrorDatabaseFailure
 	}
 
-	return user, http.StatusOK, nil
+	return user, nil
 }
