@@ -74,6 +74,12 @@ func (h *postHandler) GetPost(c *gin.Context) {
 			return
 		}
 
+		if errors.Is(err, post.ErrorUnauthorized) {
+			log.Printf("failed to get post, postID: %d, err: %s", postId, err)
+			helper.GenerateResponseAPI(http.StatusUnauthorized, "error", "Unauthorized", c, false)
+			return
+		}
+
 		log.Printf("failed to get post, postID: %d, err: %s", postId, err)
 		helper.GenerateResponseAPI(http.StatusNotFound, "error", "Unknown error occurred", c, false)
 		return
