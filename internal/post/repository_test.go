@@ -49,7 +49,7 @@ func TestFindByPostId(t *testing.T) {
 			},
 		},
 		{
-			Name: "failed_not_found",
+			Name: "failed not found",
 			Post: post.Post{},
 		},
 	}
@@ -93,7 +93,7 @@ func TestFindByUserId(t *testing.T) {
 			},
 		},
 		{
-			Name:         "not_found",
+			Name:         "failed not found",
 			Post:         post.Post{},
 			PostResponse: []post.Post{},
 		},
