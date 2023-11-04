@@ -75,7 +75,7 @@ func (h *postHandler) GetPost(c *gin.Context) {
 		}
 
 		if errors.Is(err, post.ErrorUnauthorized) {
-			log.Printf("failed to get post, postID: %d, err: %s", postId, err)
+			log.Printf("failed to get post, postID: %d, userID: %d, err: %s", postId, userId, err)
 			helper.GenerateResponseAPI(http.StatusUnauthorized, "error", "Unauthorized", c, false)
 			return
 		}
@@ -124,7 +124,7 @@ func (h *postHandler) DeletePost(c *gin.Context) {
 		}
 
 		if errors.Is(err, post.ErrorUnauthorized) {
-			log.Printf("failed to delete post, postID: %d, err: %s", postId, err)
+			log.Printf("failed to delete post, postID: %d, userID: %d, err: %s", postId, userId, err)
 			helper.GenerateResponseAPI(http.StatusUnauthorized, "error", "Unauthorized", c, false)
 			return
 		}
@@ -162,6 +162,12 @@ func (h *postHandler) UpdatePost(c *gin.Context) {
 			return
 		}
 
+		if errors.Is(err, post.ErrorUnauthorized) {
+			log.Printf("failed to update post, postID: %d, userID: %d, err: %s", postId, userId, err)
+			helper.GenerateResponseAPI(http.StatusUnauthorized, "error", "Unauthorized", c, false)
+			return
+		}
+
 		log.Printf("failed to get post, postID: %d, err: %s", postId, err)
 		helper.GenerateResponseAPI(http.StatusNotFound, "error", "Unknown error occurred", c, false)
 		return
@@ -173,7 +179,7 @@ func (h *postHandler) UpdatePost(c *gin.Context) {
 	res, err := h.postInteractor.UpdatePost(postId, userId, p)
 	if err != nil {
 		if errors.Is(err, post.ErrorUnauthorized) {
-			log.Printf("failed to delete post, postID: %d, err: %s", postId, err)
+			log.Printf("failed to update post, postID: %d, userID: %d, err: %s", postId, userId, err)
 			helper.GenerateResponseAPI(http.StatusUnauthorized, "error", "Unauthorized", c, false)
 			return
 		}
