@@ -36,9 +36,8 @@ func TestFindByPostId(t *testing.T) {
 	r := post.NewPostRepository(db)
 
 	testCases := []struct {
-		Name        string
-		Post        post.Post
-		ErrExpected error
+		Name string
+		Post post.Post
 	}{
 		{
 			Name: "success",
@@ -74,28 +73,31 @@ func TestFindByUserId(t *testing.T) {
 	db, err := database.NewConnection("../../.env")
 	assert.NoError(t, err)
 
-	p := post.Post{
-		UserId:  3,
-		Title:   "this is title",
-		Content: "this content",
+	p := []post.Post{
+		{
+			Id:      1,
+			UserId:  3,
+			Title:   "test",
+			Content: "test",
+		},
 	}
 
 	testCases := []struct {
-		Name         string
-		Post         post.Post
-		PostResponse []post.Post
+		Name        string
+		UserID      int
+		Post        post.Post
+		ExpectedRes []post.Post
 	}{
 		{
-			Name: "success",
-			Post: p,
-			PostResponse: []post.Post{
-				p,
-			},
+			Name:        "success",
+			UserID:      3,
+			Post:        p[0],
+			ExpectedRes: p,
 		},
 		{
-			Name:         "failed not found",
-			Post:         post.Post{},
-			PostResponse: []post.Post{},
+			Name:   "failed not found",
+			Post:   p[0],
+			UserID: 4,
 		},
 	}
 
@@ -103,7 +105,10 @@ func TestFindByUserId(t *testing.T) {
 		r := post.NewPostRepository(db)
 		newPost, err := r.Save(tc.Post)
 		assert.NoError(t, err)
-		assert.Equal(t, tc.Post.Title, newPost.Title)
+
+		res, err := r.FindByUserId(tc.Post.UserId)
+		assert.NoError(t, err)
+		assert.Equal(t, newPost.Title, res[0].Title)
 		func() {
 			db.Exec("DELETE FROM posts WHERE id=$1", newPost.Id)
 		}()

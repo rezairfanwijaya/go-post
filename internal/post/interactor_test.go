@@ -1,10 +1,8 @@
 package post_test
 
 import (
-	"errors"
 	"go-post/internal/post"
 	"go-post/internal/post/mocks"
-	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -26,372 +24,272 @@ func TestValidateUser(t *testing.T) {
 }
 
 func TestCreatePost(t *testing.T) {
-	repo := mocks.NewPostRepository(t)
-	interactor := post.NewInteractor(repo)
-
 	testCases := []struct {
-		Name     string
-		post     post.Post
-		HttpCode int
-		WantErr  bool
+		Name        string
+		Post        post.Post
+		ExpectedErr error
+		ExpecredRes post.Post
 	}{
 		{
 			Name: "success",
-			post: post.Post{
+			Post: post.Post{
 				Id:      1,
 				UserId:  2,
 				Title:   "test",
 				Content: "test",
 			},
-			HttpCode: http.StatusOK,
-			WantErr:  false,
+			ExpecredRes: post.Post{
+				Id:      1,
+				UserId:  2,
+				Title:   "test",
+				Content: "test",
+			},
 		},
 		{
-			Name:     "failed",
-			post:     post.Post{},
-			HttpCode: http.StatusInternalServerError,
-			WantErr:  true,
+			Name:        "failed",
+			Post:        post.Post{},
+			ExpecredRes: post.Post{},
+			ExpectedErr: post.ErrDatabaseFailure,
 		},
 	}
 
-	for _, testCase := range testCases {
-		t.Run(testCase.Name, func(t *testing.T) {
-			if !testCase.WantErr {
-				repo.On("Save", testCase.post).Return(nil)
-				httpCode, err := interactor.CreatePost(testCase.post)
-				assert.Equal(t, testCase.HttpCode, httpCode)
-				assert.Nil(t, err)
-			} else {
-				repo.On("Save", testCase.post).Return(errors.New("failed"))
-				httpCode, err := interactor.CreatePost(testCase.post)
-				assert.Equal(t, testCase.HttpCode, httpCode)
-				assert.NotNil(t, err)
-			}
-		})
+	for _, tc := range testCases {
+		r := mocks.NewPostRepository(t)
+		i := post.NewInteractor(r)
+
+		r.On("Save", tc.Post).Return(tc.ExpecredRes, tc.ExpectedErr)
+		res, err := i.CreatePost(tc.Post)
+		assert.Equal(t, tc.ExpectedErr, err)
+		assert.Equal(t, tc.ExpecredRes, res)
 	}
 }
 
 func TestGetPost(t *testing.T) {
-	repo := mocks.NewPostRepository(t)
-	interactor := post.NewInteractor(repo)
-
-	type params struct {
-		PostId int
-		UserId int
+	p := post.Post{
+		Id:      1,
+		UserId:  1,
+		Title:   "test",
+		Content: "test",
 	}
-
-	type response struct {
-		Post     post.Post
-		HttpCode int
-	}
-
 	testCases := []struct {
-		Name            string
-		Params          params
-		Response        response
-		WantErr         bool
-		IsAunauthorized bool
+		Name         string
+		PostId       int
+		UserId       int
+		ExpectedRes  post.Post
+		ExpectedPost post.Post
+		ExpectedErr  error
+		ErrRepoPost  error
 	}{
 		{
-			Name: "success",
-			Params: params{
-				PostId: 1,
-				UserId: 1,
-			},
-			Response: response{
-				Post: post.Post{
-					Id:      1,
-					UserId:  1,
-					Title:   "test",
-					Content: "test",
-				},
-				HttpCode: http.StatusOK,
-			},
-			WantErr:         false,
-			IsAunauthorized: true,
+			Name:         "success",
+			PostId:       1,
+			UserId:       1,
+			ExpectedRes:  p,
+			ExpectedPost: p,
 		},
 		{
-			Name: "unauthorized",
-			Params: params{
-				PostId: 1,
-				UserId: 2,
-			},
-			Response: response{
-				Post:     post.Post{},
-				HttpCode: http.StatusUnauthorized,
-			},
-			WantErr:         true,
-			IsAunauthorized: false,
+			Name:        "failed post not found",
+			PostId:      1,
+			UserId:      1,
+			ExpectedErr: post.ErrorPostNotFound,
+			ErrRepoPost: post.ErrorPostNotFound,
 		},
 		{
-			Name:   "failed",
-			Params: params{},
-			Response: response{
-				Post:     post.Post{},
-				HttpCode: http.StatusInternalServerError,
+			Name:   "failed user unauthorized",
+			PostId: 1,
+			UserId: 1,
+			ExpectedPost: post.Post{
+				Id:      1,
+				UserId:  4,
+				Title:   "test",
+				Content: "test",
 			},
-			WantErr:         true,
-			IsAunauthorized: true,
+			ExpectedErr: post.ErrorUnauthorized,
+		},
+		{
+			Name:        "failed",
+			PostId:      1,
+			UserId:      1,
+			ExpectedErr: post.ErrDatabaseFailure,
+			ErrRepoPost: post.ErrDatabaseFailure,
 		},
 	}
 
-	for _, testCase := range testCases {
-		t.Run(testCase.Name, func(t *testing.T) {
-			if !testCase.WantErr {
-				repo.On("FindByPostId", testCase.Params.PostId).Return(testCase.Response.Post, nil)
-				post, httpCode, err := interactor.GetPost(testCase.Params.UserId, testCase.Params.PostId)
-				assert.Equal(t, testCase.Response.Post, post)
-				assert.Equal(t, testCase.Response.HttpCode, httpCode)
-				assert.Nil(t, err)
-			} else if !testCase.IsAunauthorized {
-				repo.On("FindByPostId", testCase.Params.PostId).Return(testCase.Response.Post, nil)
-				post, httpCode, err := interactor.GetPost(testCase.Params.UserId, testCase.Params.PostId)
-				assert.Equal(t, testCase.Response.Post, post)
-				assert.Equal(t, testCase.Response.HttpCode, httpCode)
-				assert.NotNil(t, err)
-			} else {
-				repo.On("FindByPostId", testCase.Params.PostId).Return(testCase.Response.Post, errors.New("failed"))
-				post, httpCode, err := interactor.GetPost(testCase.Params.UserId, testCase.Params.PostId)
-				assert.Equal(t, testCase.Response.Post, post)
-				assert.Equal(t, testCase.Response.HttpCode, httpCode)
-				assert.NotNil(t, err)
-			}
-		})
+	for _, tc := range testCases {
+		r := mocks.NewPostRepository(t)
+		i := post.NewInteractor(r)
+
+		r.On("FindByPostId", tc.PostId).Return(tc.ExpectedPost, tc.ErrRepoPost)
+		res, err := i.GetPost(tc.UserId, tc.PostId)
+		assert.Equal(t, tc.ExpectedErr, err)
+		assert.Equal(t, tc.ExpectedRes, res)
 	}
 }
 
 func TestGetPostByUserId(t *testing.T) {
-	repo := mocks.NewPostRepository(t)
-	interactor := post.NewInteractor(repo)
-
 	testCases := []struct {
-		Name     string
-		UserId   int
-		Posts    []post.Post
-		HttpCode int
-		WantErr  bool
+		Name        string
+		UserId      int
+		ExpectedRes []post.Post
+		ExpectedErr error
 	}{
 		{
 			Name:   "success",
 			UserId: 1,
-			Posts: []post.Post{
+			ExpectedRes: []post.Post{
 				{
 					Id:      1,
 					UserId:  1,
-					Title:   "test 1",
-					Content: "test 1",
+					Title:   "test",
+					Content: "test",
 				},
 				{
 					Id:      2,
 					UserId:  1,
-					Title:   "test 2",
-					Content: "test 2",
+					Title:   "test",
+					Content: "test",
 				},
 			},
-			HttpCode: http.StatusOK,
-			WantErr:  false,
 		},
 		{
-			Name:     "failed",
-			UserId:   8,
-			Posts:    []post.Post{},
-			HttpCode: http.StatusInternalServerError,
-			WantErr:  true,
+			Name:        "failed post not found",
+			UserId:      8,
+			ExpectedErr: post.ErrorPostNotFound,
+		},
+		{
+			Name:        "failed",
+			UserId:      2,
+			ExpectedErr: post.ErrDatabaseFailure,
 		},
 	}
 
-	for _, testCase := range testCases {
-		t.Run(testCase.Name, func(t *testing.T) {
-			if !testCase.WantErr {
-				repo.On("FindByUserId", testCase.UserId).Return(testCase.Posts, nil)
-				posts, httpCode, err := interactor.GetPostByUserId(testCase.UserId)
-				assert.Equal(t, testCase.Posts, posts)
-				assert.Equal(t, testCase.HttpCode, httpCode)
-				assert.Nil(t, err)
-			} else {
-				repo.On("FindByUserId", testCase.UserId).Return(testCase.Posts, errors.New("failed"))
-				posts, httpCode, err := interactor.GetPostByUserId(testCase.UserId)
-				assert.Equal(t, testCase.Posts, posts)
-				assert.Equal(t, testCase.HttpCode, httpCode)
-				assert.NotNil(t, err)
-			}
-		})
+	for _, tc := range testCases {
+		r := mocks.NewPostRepository(t)
+		i := post.NewInteractor(r)
+
+		r.On("FindByUserId", tc.UserId).Return(tc.ExpectedRes, tc.ExpectedErr)
+		res, err := i.GetPostByUserId(tc.UserId)
+		assert.Equal(t, tc.ExpectedErr, err)
+		assert.Equal(t, tc.ExpectedRes, res)
 	}
 }
 
 func TestUpdatePost(t *testing.T) {
-	repo := mocks.NewPostRepository(t)
-	interactor := post.NewInteractor(repo)
-
-	type params struct {
-		UserId int
-		PostId int
-		Post   post.Post
-	}
-
-	type response struct {
-		Post     post.Post
-		HttpCode int
+	p := post.Post{
+		Id:      1,
+		UserId:  1,
+		Title:   "test update",
+		Content: "test update",
 	}
 
 	testCases := []struct {
-		Name           string
-		Params         params
-		Response       response
-		WantErr        bool
-		IsUnauthorized bool
+		Name         string
+		PostId       int
+		userId       int
+		Post         post.Post
+		ExpectedRes  post.Post
+		ExpectedErr  error
+		CallRepoPost bool
 	}{
 		{
-			Name: "success",
-			Params: params{
-				UserId: 1,
-				PostId: 1,
-				Post: post.Post{
-					Id:      1,
-					UserId:  1,
-					Title:   "test",
-					Content: "test",
-				},
-			},
-			Response: response{
-				Post: post.Post{
-					Id:      1,
-					UserId:  1,
-					Title:   "test",
-					Content: "test",
-				},
-				HttpCode: http.StatusOK,
-			},
-			WantErr:        false,
-			IsUnauthorized: true,
+			Name:         "success",
+			userId:       1,
+			PostId:       1,
+			Post:         p,
+			ExpectedRes:  p,
+			CallRepoPost: true,
 		},
 		{
-			Name: "unauthorized",
-			Params: params{
-				UserId: 2,
-				PostId: 1,
-				Post: post.Post{
-					Id:      1,
-					UserId:  8,
-					Title:   "test",
-					Content: "test",
-				},
-			},
-			Response: response{
-				Post:     post.Post{},
-				HttpCode: http.StatusUnauthorized,
-			},
-			WantErr:        true,
-			IsUnauthorized: false,
+			Name:         "failed user unauthorized",
+			userId:       9,
+			PostId:       1,
+			Post:         p,
+			ExpectedErr:  post.ErrorUnauthorized,
+			CallRepoPost: false,
 		},
 		{
-			Name:   "failed",
-			Params: params{},
-			Response: response{
-				Post:     post.Post{},
-				HttpCode: http.StatusInternalServerError,
-			},
-			WantErr:        true,
-			IsUnauthorized: true,
+			Name:         "failed",
+			userId:       1,
+			PostId:       1,
+			Post:         p,
+			CallRepoPost: true,
+			ExpectedErr:  post.ErrDatabaseFailure,
 		},
 	}
 
-	for _, testCase := range testCases {
-		t.Run(testCase.Name, func(t *testing.T) {
-			if !testCase.WantErr {
-				repo.On("Update", testCase.Params.PostId, testCase.Params.Post).Return(nil)
+	for _, tc := range testCases {
+		r := mocks.NewPostRepository(t)
+		i := post.NewInteractor(r)
 
-				post, httpCode, err := interactor.UpdatePost(testCase.Params.PostId, testCase.Params.UserId, testCase.Params.Post)
-				assert.Equal(t, testCase.Response.Post, post)
-				assert.Equal(t, testCase.Response.HttpCode, httpCode)
-				assert.Nil(t, err)
-			} else if !testCase.IsUnauthorized {
-				post, httpCode, err := interactor.UpdatePost(testCase.Params.PostId, testCase.Params.UserId, testCase.Params.Post)
-				assert.Equal(t, testCase.Response.Post, post)
-				assert.Equal(t, testCase.Response.HttpCode, httpCode)
-				assert.NotNil(t, err)
-			} else {
-				repo.On("Update", testCase.Params.PostId, testCase.Params.Post).Return(errors.New("failed"))
+		if tc.CallRepoPost {
+			r.On("Update", tc.PostId, tc.Post).Return(tc.ExpectedErr)
+		}
 
-				post, httpCode, err := interactor.UpdatePost(testCase.Params.PostId, testCase.Params.UserId, testCase.Params.Post)
-				assert.Equal(t, testCase.Response.Post, post)
-				assert.Equal(t, testCase.Response.HttpCode, httpCode)
-				assert.NotNil(t, err)
-			}
-		})
+		res, err := i.UpdatePost(tc.PostId, tc.userId, tc.Post)
+		assert.Equal(t, tc.ExpectedErr, err)
+		assert.Equal(t, tc.ExpectedRes, res)
 	}
 }
 
 func TestDeletePost(t *testing.T) {
-	repo := mocks.NewPostRepository(t)
-	interactor := post.NewInteractor(repo)
-
-	type Params struct {
-		PostId int
-		UserId int
+	p := post.Post{
+		Id:      1,
+		UserId:  1,
+		Title:   "test",
+		Content: "test",
 	}
 
 	testCases := []struct {
-		Name           string
-		Params         Params
-		HttpCode       int
-		IsUnauthorized bool
-		WantErr        bool
+		Name        string
+		PostID      int
+		UserID      int
+		Post        post.Post
+		ErrPostRepo error
+		ExpectedErr error
+		IsValidUser bool
 	}{
 		{
-			Name: "success",
-			Params: Params{
-				PostId: 1,
-				UserId: 2,
-			},
-			HttpCode:       http.StatusOK,
-			IsUnauthorized: true,
-			WantErr:        false,
+			Name:        "success",
+			PostID:      1,
+			UserID:      1,
+			Post:        p,
+			IsValidUser: true,
 		},
 		{
-			Name: "unauthorized",
-			Params: Params{
-				PostId: 1,
-				UserId: 78,
-			},
-			HttpCode:       http.StatusUnauthorized,
-			IsUnauthorized: false,
-			WantErr:        true,
+			Name:        "failed post not found",
+			PostID:      2,
+			UserID:      1,
+			Post:        post.Post{},
+			ErrPostRepo: post.ErrorPostNotFound,
+			ExpectedErr: post.ErrorPostNotFound,
 		},
 		{
-			Name: "failed",
-			Params: Params{
-				PostId: 1,
-				UserId: 2,
-			},
-			HttpCode:       http.StatusInternalServerError,
-			IsUnauthorized: true,
-			WantErr:        true,
+			Name:        "failed user unauthorized",
+			PostID:      1,
+			UserID:      8,
+			Post:        p,
+			ExpectedErr: post.ErrorUnauthorized,
+		},
+		{
+			Name:        "failed",
+			PostID:      1,
+			UserID:      1,
+			Post:        p,
+			ExpectedErr: post.ErrDatabaseFailure,
+			IsValidUser: true,
 		},
 	}
 
-	for _, testCase := range testCases {
-		t.Run(testCase.Name, func(t *testing.T) {
-			if !testCase.WantErr {
-				repo.On("FindByPostId", testCase.Params.PostId).Return(post.Post{Id: 1, UserId: 2}, nil)
-				repo.On("Delete", testCase.Params.PostId).Return(nil)
+	for _, tc := range testCases {
+		r := mocks.NewPostRepository(t)
+		i := post.NewInteractor(r)
 
-				httpCode, err := interactor.DeletePost(testCase.Params.PostId, testCase.Params.UserId)
-				assert.Equal(t, testCase.HttpCode, httpCode)
-				assert.Nil(t, err)
-			} else if !testCase.IsUnauthorized {
-				repo.On("FindByPostId", testCase.Params.PostId).Return(post.Post{Id: 1, UserId: 3}, nil)
+		r.On("FindByPostId", tc.PostID).Return(tc.Post, tc.ErrPostRepo)
+		if tc.IsValidUser {
+			r.On("Delete", tc.PostID).Return(tc.ExpectedErr)
+		}
 
-				httpCode, err := interactor.DeletePost(testCase.Params.PostId, testCase.Params.UserId)
-				assert.Equal(t, testCase.HttpCode, httpCode)
-				assert.NotNil(t, err)
-			} else {
-				repo.On("FindByPostId", testCase.Params.PostId).Return(post.Post{Id: 1, UserId: 2}, nil)
-				
-				repo.On("Delete", testCase.Params.PostId).Return(errors.New("failed"))
-				httpCode, err := interactor.DeletePost(testCase.Params.PostId, testCase.Params.UserId)
-				t.Log(httpCode, err)
-			}
-		})
+		err := i.DeletePost(tc.PostID, tc.UserID)
+		assert.Equal(t, tc.ExpectedErr, err)
 	}
 }

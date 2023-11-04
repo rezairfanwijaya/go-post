@@ -1,16 +1,17 @@
 package post
 
 import (
+	"errors"
 	"fmt"
-	"net/http"
+	"log"
 )
 
 type Interactor interface {
-	CreatePost(post Post) (int, error)
-	GetPost(userId, postId int) (Post, int, error)
-	GetPostByUserId(userId int) ([]Post, int, error)
-	UpdatePost(postId, userId int, post Post) (Post, int, error)
-	DeletePost(postId, userId int) (int, error)
+	CreatePost(post Post) (Post, error)
+	GetPost(userId, postId int) (Post, error)
+	GetPostByUserId(userId int) ([]Post, error)
+	UpdatePost(postId, userId int, post Post) (Post, error)
+	DeletePost(postId, userId int) error
 	ValidateUser(userId int, post Post) bool
 }
 
@@ -18,72 +19,102 @@ type interactor struct {
 	postRepository PostRepository
 }
 
+var (
+	ErrDatabaseFailure = errors.New("unknown error occurred")
+	ErrorPostNotFound  = errors.New("post not found")
+	ErrorUnauthorized  = errors.New("unauthorized")
+)
+
 func NewInteractor(postRepository PostRepository) Interactor {
 	return &interactor{
 		postRepository: postRepository,
 	}
 }
 
-func (i *interactor) CreatePost(post Post) (int, error) {
-	_, err := i.postRepository.Save(post)
+func (i *interactor) CreatePost(post Post) (Post, error) {
+	post, err := i.postRepository.Save(post)
 	if err != nil {
-		return http.StatusInternalServerError, err
+		log.Printf("failed to save post, title: %s, userId: %d, err: %s", post.Title, post.UserId, err)
+		return post, ErrDatabaseFailure
 	}
 
-	return http.StatusOK, nil
+	return post, nil
 }
 
-func (i *interactor) GetPost(userId, postId int) (Post, int, error) {
+func (i *interactor) GetPost(userId, postId int) (Post, error) {
 	post, err := i.postRepository.FindByPostId(postId)
 	if err != nil {
-		return post, http.StatusInternalServerError, err
+		if errors.Is(err, ErrorPostNotFound) {
+			log.Printf("failed to find post with title: %s, userId: %d, err: %s", post.Title, post.UserId, err)
+			return post, ErrorPostNotFound
+		}
+
+		log.Printf("failed to find post with title: %s, userId: %d, err: %s", post.Title, post.UserId, err)
+		return post, err
 	}
 
 	if isValid := i.ValidateUser(userId, post); !isValid {
-		return Post{}, http.StatusUnauthorized, fmt.Errorf("unauthorized")
+		log.Printf("failed validate user, userId: %d, valid: %v", userId, isValid)
+		return Post{}, ErrorUnauthorized
 	}
 
-	return post, http.StatusOK, nil
+	return post, nil
 }
 
-func (i *interactor) GetPostByUserId(userId int) ([]Post, int, error) {
+func (i *interactor) GetPostByUserId(userId int) ([]Post, error) {
 	posts, err := i.postRepository.FindByUserId(userId)
 	if err != nil {
-		return posts, http.StatusInternalServerError, err
+		if errors.Is(err, ErrorPostNotFound) {
+			log.Printf("failed to find post with userId: %d, err: %s", userId, err)
+			return posts, ErrorPostNotFound
+		}
+
+		log.Printf("failed to find post with userId: %d, err: %s", userId, err)
+		return posts, err
 	}
 
-	return posts, http.StatusOK, nil
+	return posts, nil
 }
 
-func (i *interactor) UpdatePost(postId, userId int, post Post) (Post, int, error) {
+func (i *interactor) UpdatePost(postId, userId int, post Post) (Post, error) {
 	if isValid := i.ValidateUser(userId, post); !isValid {
-		return Post{}, http.StatusUnauthorized, fmt.Errorf("unauthorized")
+		log.Printf("failed validate user, userId: %d, valid: %v", userId, isValid)
+		return Post{}, fmt.Errorf("unauthorized")
 	}
 
 	err := i.postRepository.Update(postId, post)
 	if err != nil {
-		return Post{}, http.StatusInternalServerError, err
+		log.Printf("failed update post, userId: %d, postId: %d, err: %s", userId, postId, err)
+		return Post{}, err
 	}
 
-	return post, http.StatusOK, nil
+	return post, nil
 }
 
-func (i *interactor) DeletePost(postId, userId int) (int, error) {
+func (i *interactor) DeletePost(postId, userId int) error {
 	post, err := i.postRepository.FindByPostId(postId)
 	if err != nil {
-		return http.StatusInternalServerError, err
+		if errors.Is(err, ErrorPostNotFound) {
+			log.Printf("failed to find post with userId: %d, err: %s", userId, err)
+			return ErrorPostNotFound
+		}
+
+		log.Printf("failed to find post with userId: %d, err: %s", userId, err)
+		return err
 	}
 
 	if isValid := i.ValidateUser(userId, post); !isValid {
-		return http.StatusUnauthorized, fmt.Errorf("unauthorized")
+		log.Printf("failed validate user, userId: %d, valid: %v", userId, isValid)
+		return ErrorUnauthorized
 	}
 
 	err = i.postRepository.Delete(post.Id)
 	if err != nil {
-		return http.StatusInternalServerError, err
+		log.Printf("failed delete post, err: %s", err)
+		return err
 	}
 
-	return http.StatusOK, nil
+	return nil
 }
 
 func (i *interactor) ValidateUser(userId int, post Post) bool {
