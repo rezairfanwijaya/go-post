@@ -1,10 +1,12 @@
 package handler
 
 import (
+	"errors"
 	"go-post/internal/helper"
 	"go-post/internal/post"
 	"go-post/internal/response"
 	"go-post/internal/user"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -30,7 +32,8 @@ func (h *postHandler) CreatePost(c *gin.Context) {
 	var input post.InputCreatePost
 
 	if err := c.BindJSON(&input); err != nil {
-		helper.GenerateResponseAPI(http.StatusBadRequest, "error", err.Error(), c, false)
+		log.Printf("failed to binding input, err: %s", err)
+		helper.GenerateResponseAPI(http.StatusBadRequest, "error", "Invalid input", c, false)
 		return
 	}
 
@@ -42,12 +45,14 @@ func (h *postHandler) CreatePost(c *gin.Context) {
 		Content: input.Content,
 	}
 
-	if httpCode, err := h.postInteractor.CreatePost(post); err != nil {
-		helper.GenerateResponseAPI(httpCode, "error", err.Error(), c, false)
+	p, err := h.postInteractor.CreatePost(post)
+	if err != nil {
+		log.Printf("failed to create new post, err: %s", err)
+		helper.GenerateResponseAPI(http.StatusInternalServerError, "error", "Failed create post", c, false)
 		return
 	}
 
-	helper.GenerateResponseAPI(http.StatusOK, "success", "success", c, false)
+	helper.GenerateResponseAPI(http.StatusOK, "success", p, c, false)
 }
 
 func (h *postHandler) GetPost(c *gin.Context) {
@@ -56,25 +61,38 @@ func (h *postHandler) GetPost(c *gin.Context) {
 
 	postId, err := strconv.Atoi(id)
 	if err != nil {
-		helper.GenerateResponseAPI(http.StatusBadRequest, "error in convert id", err.Error(), c, false)
+		log.Printf("failed convert to integer, err: %s", err)
+		helper.GenerateResponseAPI(http.StatusBadRequest, "error", "Invalid input", c, false)
 		return
 	}
 
-	post, httpCode, err := h.postInteractor.GetPost(userId, postId)
+	p, err := h.postInteractor.GetPost(userId, postId)
 	if err != nil {
-		helper.GenerateResponseAPI(httpCode, "error", err.Error(), c, false)
+		if errors.Is(err, post.ErrorPostNotFound) {
+			log.Printf("failed to get post, postID: %d, err: %s", postId, err)
+			helper.GenerateResponseAPI(http.StatusNotFound, "error", "Post not found", c, false)
+			return
+		}
+
+		log.Printf("failed to get post, postID: %d, err: %s", postId, err)
+		helper.GenerateResponseAPI(http.StatusNotFound, "error", "Unknown error occurred", c, false)
 		return
 	}
 
-	user, err := h.userInteractor.GetUserById(userId)
+	u, err := h.userInteractor.GetUserById(userId)
 	if err != nil {
-		helper.GenerateResponseAPI(httpCode, "error", err.Error(), c, false)
+		if errors.Is(err, user.ErrorUserNotFound) {
+			helper.GenerateResponseAPI(http.StatusNotFound, "error", "User not found", c, false)
+			return
+		}
+
+		helper.GenerateResponseAPI(http.StatusInternalServerError, "error", "Unknown error occurred", c, false)
 		return
 	}
 
 	postResponse := response.PostResponse{
-		Post: post,
-		User: user,
+		Post: p,
+		User: u,
 	}
 
 	helper.GenerateResponseAPI(http.StatusOK, "success", postResponse, c, false)
@@ -86,13 +104,26 @@ func (h *postHandler) DeletePost(c *gin.Context) {
 
 	postId, err := strconv.Atoi(id)
 	if err != nil {
-		helper.GenerateResponseAPI(http.StatusBadRequest, "error in convert id", err.Error(), c, false)
+		log.Printf("failed convert to integer, err: %s", err)
+		helper.GenerateResponseAPI(http.StatusBadRequest, "error", "Invalid input", c, false)
 		return
 	}
 
-	httpCode, err := h.postInteractor.DeletePost(postId, userId)
+	err = h.postInteractor.DeletePost(postId, userId)
 	if err != nil {
-		helper.GenerateResponseAPI(httpCode, "error", err.Error(), c, false)
+		if errors.Is(err, post.ErrorPostNotFound) {
+			log.Printf("failed to delete post, postID: %d, err: %s", postId, err)
+			helper.GenerateResponseAPI(http.StatusNotFound, "error", "Post not found", c, false)
+			return
+		}
+
+		if errors.Is(err, post.ErrorUnauthorized) {
+			log.Printf("failed to delete post, postID: %d, err: %s", postId, err)
+			helper.GenerateResponseAPI(http.StatusUnauthorized, "error", "Unauthorized", c, false)
+			return
+		}
+
+		helper.GenerateResponseAPI(http.StatusInternalServerError, "error", "Unknown error occurred", c, false)
 		return
 	}
 
@@ -105,31 +136,45 @@ func (h *postHandler) UpdatePost(c *gin.Context) {
 
 	postId, err := strconv.Atoi(id)
 	if err != nil {
-		helper.GenerateResponseAPI(http.StatusBadRequest, "error in convert id", err.Error(), c, false)
+		log.Printf("failed convert to integer, err: %s", err)
+		helper.GenerateResponseAPI(http.StatusBadRequest, "error", "Invalid input", c, false)
 		return
 	}
 
 	var input post.InputUpdatePost
 	if err := c.BindJSON(&input); err != nil {
-		errsBinding := helper.ErrorBindingFormatter(err)
-		helper.GenerateResponseAPI(http.StatusBadRequest, "error binding", errsBinding, c, false)
+		log.Printf("failed to binding input, err: %s", err)
+		helper.GenerateResponseAPI(http.StatusBadRequest, "error", "Invalid input", c, false)
 		return
 	}
 
-	post, httpCode, err := h.postInteractor.GetPost(userId, postId)
+	p, err := h.postInteractor.GetPost(userId, postId)
 	if err != nil {
-		helper.GenerateResponseAPI(httpCode, "error", err.Error(), c, false)
+		if errors.Is(err, post.ErrorPostNotFound) {
+			log.Printf("failed to get post, postID: %d, err: %s", postId, err)
+			helper.GenerateResponseAPI(http.StatusNotFound, "error", "Post not found", c, false)
+			return
+		}
+
+		log.Printf("failed to get post, postID: %d, err: %s", postId, err)
+		helper.GenerateResponseAPI(http.StatusNotFound, "error", "Unknown error occurred", c, false)
 		return
 	}
 
-	post.Content = input.Content
-	post.Title = input.Title
+	p.Content = input.Content
+	p.Title = input.Title
 
-	post, httpCode, err = h.postInteractor.UpdatePost(postId, userId, post)
+	res, err := h.postInteractor.UpdatePost(postId, userId, p)
 	if err != nil {
-		helper.GenerateResponseAPI(httpCode, "error", err.Error(), c, false)
+		if errors.Is(err, post.ErrorUnauthorized) {
+			log.Printf("failed to delete post, postID: %d, err: %s", postId, err)
+			helper.GenerateResponseAPI(http.StatusUnauthorized, "error", "Unauthorized", c, false)
+			return
+		}
+
+		helper.GenerateResponseAPI(http.StatusInternalServerError, "error", "Unknow error occurred", c, false)
 		return
 	}
 
-	helper.GenerateResponseAPI(http.StatusOK, "success", post, c, false)
+	helper.GenerateResponseAPI(http.StatusOK, "success", res, c, false)
 }

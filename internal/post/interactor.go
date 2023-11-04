@@ -2,7 +2,6 @@ package post
 
 import (
 	"errors"
-	"fmt"
 	"log"
 )
 
@@ -79,13 +78,13 @@ func (i *interactor) GetPostByUserId(userId int) ([]Post, error) {
 func (i *interactor) UpdatePost(postId, userId int, post Post) (Post, error) {
 	if isValid := i.ValidateUser(userId, post); !isValid {
 		log.Printf("failed validate user, userId: %d, valid: %v", userId, isValid)
-		return Post{}, fmt.Errorf("unauthorized")
+		return Post{}, ErrorUnauthorized
 	}
 
 	err := i.postRepository.Update(postId, post)
 	if err != nil {
 		log.Printf("failed update post, userId: %d, postId: %d, err: %s", userId, postId, err)
-		return Post{}, err
+		return Post{}, ErrDatabaseFailure
 	}
 
 	return post, nil

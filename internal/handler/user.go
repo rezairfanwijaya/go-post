@@ -104,9 +104,15 @@ func (h *userHandler) Login(c *gin.Context) {
 func (h *userHandler) GetUserWithPosts(c *gin.Context) {
 	userId := c.MustGet("user").(int)
 
-	p, httpCode, err := h.postInteractor.GetPostByUserId(userId)
+	p, err := h.postInteractor.GetPostByUserId(userId)
 	if err != nil {
-		helper.GenerateResponseAPI(httpCode, "error", err.Error(), c, false)
+		if errors.Is(err, post.ErrorPostNotFound) {
+			log.Printf("failed to get post by user id, userID: %d, err: %s", userId, err)
+			helper.GenerateResponseAPI(http.StatusBadRequest, "error", "Post not found", c, false)
+			return
+		}
+
+		helper.GenerateResponseAPI(http.StatusInternalServerError, "error", "Unknown error occurred", c, false)
 		return
 	}
 
