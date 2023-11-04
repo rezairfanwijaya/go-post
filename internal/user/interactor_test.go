@@ -60,11 +60,18 @@ func TestValidateUser(t *testing.T) {
 			IsValid: true,
 		},
 		{
+			Name:    "user not found",
+			UserId:  2,
+			User:    user.User{},
+			IsValid: false,
+			Error:   user.ErrorUserNotFound,
+		},
+		{
 			Name:    "failed",
 			UserId:  4,
 			User:    user.User{},
 			IsValid: false,
-			Error:   user.ErrorAuth,
+			Error:   user.ErrorDatabaseFailure,
 		},
 	}
 
@@ -96,6 +103,12 @@ func TestGetUserById(t *testing.T) {
 				Email:    "test@gmail.com",
 				Password: "fjbdjfb232j",
 			},
+		},
+		{
+			Name:   "failed user not found",
+			UserId: 5,
+			User:   user.User{},
+			Error:  user.ErrorUserNotFound,
 		},
 		{
 			Name:   "failed",
@@ -133,6 +146,12 @@ func TestGetUserByEmail(t *testing.T) {
 				Email:    "test@gmail.com",
 				Password: "fnjdfbdj",
 			},
+		},
+		{
+			Name:  "failed user not found",
+			Email: "failed@gmail.com",
+			User:  user.User{},
+			Error: user.ErrorUserNotFound,
 		},
 		{
 			Name:  "failed",

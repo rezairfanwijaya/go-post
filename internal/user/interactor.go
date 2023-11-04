@@ -2,6 +2,7 @@ package user
 
 import (
 	"errors"
+	"log"
 )
 
 type Interactor interface {
@@ -30,6 +31,7 @@ func NewInteractor(userRepo UserRepository) *interactor {
 func (i *interactor) CreateUser(user User) (User, error) {
 	user, err := i.userRepo.Save(user)
 	if err != nil {
+		log.Printf("failed to create user, err: %s", err)
 		return user, ErrorDatabaseFailure
 	}
 
@@ -37,13 +39,15 @@ func (i *interactor) CreateUser(user User) (User, error) {
 }
 
 func (i *interactor) ValidateUser(userId int) (bool, error) {
-	user, err := i.userRepo.FindById(userId)
+	_, err := i.userRepo.FindById(userId)
 	if err != nil {
-		return false, err
-	}
+		if errors.Is(err, ErrorUserNotFound) {
+			log.Printf("failed to find user with id: %d, err: %s", userId, err)
+			return false, ErrorUserNotFound
+		}
 
-	if user.Id == 0 {
-		return false, ErrorAuth
+		log.Printf("failed to find user with id: %d, err: %s", userId, err)
+		return false, ErrorDatabaseFailure
 	}
 
 	return true, nil
@@ -52,17 +56,27 @@ func (i *interactor) ValidateUser(userId int) (bool, error) {
 func (i *interactor) GetUserById(userId int) (User, error) {
 	user, err := i.userRepo.FindById(userId)
 	if err != nil {
+		if errors.Is(err, ErrorUserNotFound) {
+			log.Printf("failed to find user with id: %d, err: %s", userId, err)
+			return user, ErrorUserNotFound
+		}
+
+		log.Printf("failed to find user with id: %d, err: %s", userId, err)
 		return user, ErrorDatabaseFailure
 	}
-
 	return user, nil
 }
 
 func (i *interactor) GetUserByEmail(email string) (User, error) {
 	user, err := i.userRepo.FindByEmail(email)
 	if err != nil {
-		return user, ErrorUserNotFound
-	}
+		if errors.Is(err, ErrorUserNotFound) {
+			log.Printf("failed to find user with email: %s, err: %s", email, err)
+			return user, ErrorUserNotFound
+		}
 
+		log.Printf("failed to find user with email: %s, err: %s", email, err)
+		return user, ErrorDatabaseFailure
+	}
 	return user, nil
 }
